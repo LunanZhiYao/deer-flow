@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo } from "react";
 
 import { useI18n } from "@/core/i18n/hooks";
+import { useAuth } from "@/core/auth";
 import { cn } from "@/lib/utils";
 
 import { AuroraText } from "../ui/aurora-text";
@@ -19,6 +20,7 @@ export function Welcome({
 }) {
   const { t } = useI18n();
   const searchParams = useSearchParams();
+  const { userId } = useAuth();
   const isUltra = useMemo(() => mode === "ultra", [mode]);
   const colors = useMemo(() => {
     if (isUltra) {
@@ -75,6 +77,11 @@ export function Welcome({
             <pre className="whitespace-pre">{t.welcome.description}</pre>
           ) : (
             <p className="animate-fade-in">{t.welcome.description}</p>
+          )}
+          {userId && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              用户ID: {userId}
+            </p>
           )}
         </div>
       )}
