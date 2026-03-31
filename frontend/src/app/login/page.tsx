@@ -27,13 +27,13 @@ export default function LoginPage() {
       case "unauthorized":
         return {
           title: "非法访问",
-          description: "请通过云上鲁南 APP 扫码进入",
+          description: "请通过 云上鲁南 进入",
           icon: AlertCircle,
         };
       default:
         return {
           title: "访问受限",
-          description: "请通过云上鲁南 APP 扫码进入",
+          description: "请通过 云上鲁南 进入",
           icon: ShieldX,
         };
     }
@@ -66,7 +66,7 @@ export default function LoginPage() {
           </p>
           <div className="mt-4 rounded-lg bg-gray-100 p-4 dark:bg-gray-800">
             <p className="text-muted-foreground text-center text-xs">
-              请打开云上鲁南 APP，扫描入口二维码进入系统
+              请使用 云上鲁南 进入系统
             </p>
           </div>
           <Button

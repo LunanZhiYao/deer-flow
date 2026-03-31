@@ -10,19 +10,16 @@ import {
 } from "react";
 import type { AuthContextType, AuthState } from "./types";
 
-// 认证上下文
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Cookie 名称
 const AUTH_COOKIE_NAME = "deerflow_auth";
 const USER_ID_COOKIE_NAME = "deerflow_user_id";
-
-// Cookie 操作函数
-function setCookie(name: string, value: string, days: number = 7): void {
-  const expires = new Date();
-  expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
-  document.cookie = `${name}=${encodeURIComponent(value)};expires=${expires.toUTCString()};path=/;SameSite=Strict`;
-}
+const USER_NAME_COOKIE_NAME = "deerflow_user_name";
+const USER_EMAIL_COOKIE_NAME = "deerflow_user_email";
+const USER_DEPARTMENT_COOKIE_NAME = "deerflow_user_department";
+const USER_POSITION_COOKIE_NAME = "deerflow_user_position";
+const USER_MOBILE_COOKIE_NAME = "deerflow_user_mobile";
+const USER_AVATAR_COOKIE_NAME = "deerflow_user_avatar";
 
 function getCookie(name: string): string | null {
   const nameEQ = `${name}=`;
@@ -43,30 +40,63 @@ function deleteCookie(name: string): void {
   document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
 }
 
-// 认证 Provider 组件
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({
     isAuthenticated: false,
     userId: null,
+    userName: null,
+    userEmail: null,
+    userDepartment: null,
+    userPosition: null,
+    userMobile: null,
+    userAvatar: null,
     isLoading: true,
   });
 
-  // 检查认证状态
   const checkAuth = useCallback(async () => {
     try {
       const authCookie = getCookie(AUTH_COOKIE_NAME);
       const userIdCookie = getCookie(USER_ID_COOKIE_NAME);
+      const userNameCookie = getCookie(USER_NAME_COOKIE_NAME);
+      const userEmailCookie = getCookie(USER_EMAIL_COOKIE_NAME);
+      const userDepartmentCookie = getCookie(USER_DEPARTMENT_COOKIE_NAME);
+      const userPositionCookie = getCookie(USER_POSITION_COOKIE_NAME);
+      const userMobileCookie = getCookie(USER_MOBILE_COOKIE_NAME);
+      const userAvatarCookie = getCookie(USER_AVATAR_COOKIE_NAME);
+
+      console.log("[AuthProvider] Checking auth cookies:", {
+        auth: authCookie,
+        userId: userIdCookie,
+        userName: userNameCookie,
+        userEmail: userEmailCookie,
+        userDepartment: userDepartmentCookie,
+        userPosition: userPositionCookie,
+        userMobile: userMobileCookie,
+        userAvatar: userAvatarCookie,
+      });
 
       if (authCookie === "true" && userIdCookie) {
         setState({
           isAuthenticated: true,
           userId: userIdCookie,
+          userName: userNameCookie,
+          userEmail: userEmailCookie,
+          userDepartment: userDepartmentCookie,
+          userPosition: userPositionCookie,
+          userMobile: userMobileCookie,
+          userAvatar: userAvatarCookie,
           isLoading: false,
         });
       } else {
         setState({
           isAuthenticated: false,
           userId: null,
+          userName: null,
+          userEmail: null,
+          userDepartment: null,
+          userPosition: null,
+          userMobile: null,
+          userAvatar: null,
           isLoading: false,
         });
       }
@@ -74,34 +104,60 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setState({
         isAuthenticated: false,
         userId: null,
+        userName: null,
+        userEmail: null,
+        userDepartment: null,
+        userPosition: null,
+        userMobile: null,
+        userAvatar: null,
         isLoading: false,
       });
     }
   }, []);
 
-  // 登录
-  const login = useCallback((userId: string) => {
-    setCookie(AUTH_COOKIE_NAME, "true");
-    setCookie(USER_ID_COOKIE_NAME, userId);
+  const login = useCallback((userId: string, userInfo?: {
+    name?: string;
+    email?: string;
+    department?: string;
+    position?: string;
+    mobile?: string;
+    avatar?: string;
+  }) => {
     setState({
       isAuthenticated: true,
       userId,
+      userName: userInfo?.name || null,
+      userEmail: userInfo?.email || null,
+      userDepartment: userInfo?.department || null,
+      userPosition: userInfo?.position || null,
+      userMobile: userInfo?.mobile || null,
+      userAvatar: userInfo?.avatar || null,
       isLoading: false,
     });
   }, []);
 
-  // 登出
   const logout = useCallback(() => {
     deleteCookie(AUTH_COOKIE_NAME);
     deleteCookie(USER_ID_COOKIE_NAME);
+    deleteCookie(USER_NAME_COOKIE_NAME);
+    deleteCookie(USER_EMAIL_COOKIE_NAME);
+    deleteCookie(USER_DEPARTMENT_COOKIE_NAME);
+    deleteCookie(USER_POSITION_COOKIE_NAME);
+    deleteCookie(USER_MOBILE_COOKIE_NAME);
+    deleteCookie(USER_AVATAR_COOKIE_NAME);
     setState({
       isAuthenticated: false,
       userId: null,
+      userName: null,
+      userEmail: null,
+      userDepartment: null,
+      userPosition: null,
+      userMobile: null,
+      userAvatar: null,
       isLoading: false,
     });
   }, []);
 
-  // 初始化时检查认证状态
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
@@ -120,23 +176,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// 使用认证 Hook
 export function useAuth(): AuthContextType {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error("useAuth 必须在 AuthProvider 内使用");
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 }
 
-// 检查是否已认证
 export function useIsAuthenticated(): boolean {
   const { isAuthenticated } = useAuth();
   return isAuthenticated;
 }
 
-// 获取用户ID
 export function useUserId(): string | null {
   const { userId } = useAuth();
   return userId;
+}
+
+export function useUserName(): string | null {
+  const { userName } = useAuth();
+  return userName;
+}
+
+export function useUserEmail(): string | null {
+  const { userEmail } = useAuth();
+  return userEmail;
+}
+
+export function useUserDepartment(): string | null {
+  const { userDepartment } = useAuth();
+  return userDepartment;
+}
+
+export function useUserPosition(): string | null {
+  const { userPosition } = useAuth();
+  return userPosition;
+}
+
+export function useUserMobile(): string | null {
+  const { userMobile } = useAuth();
+  return userMobile;
+}
+
+export function useUserAvatar(): string | null {
+  const { userAvatar } = useAuth();
+  return userAvatar;
 }
