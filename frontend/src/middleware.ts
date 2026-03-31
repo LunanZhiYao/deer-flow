@@ -1,50 +1,81 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { parseWorkCode } from "@/lib/crypto";
 
+// 认证入口路由
+const AUTH_ENTRY_ROUTE = "/";
+// 认证成功后跳转的路由
+const SUCCESS_REDIRECT_ROUTE = "/workspace/chats/new";
 // 认证 Cookie 名称
 const AUTH_COOKIE_NAME = "deerflow_auth";
 const USER_ID_COOKIE_NAME = "deerflow_user_id";
 
-/**
- * 从请求中获取 Cookie 值
- */
-function getCookieFromRequest(
-  request: NextRequest,
-  name: string
-): string | null {
-  return request.cookies.get(name)?.value ?? null;
-}
-
-/**
- * 中间件配置 - 匹配需要认证的路径
- */
-export const config = {
-  matcher: [
-    // 匹配 workspace 下的所有路径
-    "/workspace/:path*",
-  ],
-};
-
-/**
- * 中间件主函数 - 检查用户认证状态
- */
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // 检查是否已认证
-  const authCookie = getCookieFromRequest(request, AUTH_COOKIE_NAME);
-  const userIdCookie = getCookieFromRequest(request, USER_ID_COOKIE_NAME);
+  // 只处理根路径的请求
+  if (pathname === AUTH_ENTRY_ROUTE) {
+    // 检查是否已经认证
+    const authCookie = request.cookies.get(AUTH_COOKIE_NAME)?.value;
+    const userIdCookie = request.cookies.get(USER_ID_COOKIE_NAME)?.value;
 
-  // 未认证则重定向到登录页
-  if (!authCookie || authCookie !== "true" || !userIdCookie) {
-    const loginUrl = new URL("/login", request.url);
-    // 保存原始请求路径，登录后可跳转回来
-    loginUrl.searchParams.set("redirect", pathname);
-    return NextResponse.redirect(loginUrl);
+    if (authCookie === "true" && userIdCookie) {
+      // 已认证，直接跳转到工作区
+      return NextResponse.redirect(new URL(SUCCESS_REDIRECT_ROUTE, request.url));
+    }
+
+    // 获取请求头中的 workCode
+    const workCode = request.headers.get("workCode");
+
+    if (workCode) {
+      // 解析 workCode 获取用户 ID
+      const userId = parseWorkCode(workCode);
+
+      if (userId) {
+        // 认证成功，设置 Cookie 并跳转
+        const response = NextResponse.redirect(new URL(SUCCESS_REDIRECT_ROUTE, request.url));
+        
+        // 设置认证 Cookie（7天有效期）
+        response.cookies.set(AUTH_COOKIE_NAME, "true", {
+          path: "/",
+          maxAge: 7 * 24 * 60 * 60,
+          sameSite: "strict",
+        });
+        response.cookies.set(USER_ID_COOKIE_NAME, userId, {
+          path: "/",
+          maxAge: 7 * 24 * 60 * 60,
+          sameSite: "strict",
+        });
+
+        return response;
+      } else {
+        // workCode 解析失败，显示非法访问页面
+        const errorUrl = new URL("/login?error=invalid_workcode", request.url);
+        return NextResponse.redirect(errorUrl);
+      }
+    } else {
+      // 没有 workCode，显示非法访问页面
+      const errorUrl = new URL("/login?error=unauthorized", request.url);
+      return NextResponse.redirect(errorUrl);
+    }
   }
 
-  // 已认证，继续请求
-  const response = NextResponse.next();
-  // 将用户ID添加到响应头，供后续使用
-  response.headers.set("x-user-id", userIdCookie);
-  return response;
+  // 检查受保护的路由
+  if (pathname.startsWith("/workspace")) {
+    const authCookie = request.cookies.get(AUTH_COOKIE_NAME)?.value;
+    const userIdCookie = request.cookies.get(USER_ID_COOKIE_NAME)?.value;
+
+    if (authCookie !== "true" || !userIdCookie) {
+      // 未认证，跳转到登录页面
+      const loginUrl = new URL("/login", request.url);
+      return NextResponse.redirect(loginUrl);
+    }
+  }
+
+  return NextResponse.next();
 }
+
+// 配置中间件匹配的路由
+export const config = {
+  matcher: ["/", "/workspace/:path*"],
+};

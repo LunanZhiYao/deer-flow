@@ -7,7 +7,8 @@ import type { QRCodeResponse } from "@/core/auth/types";
 const EXPIRES_IN = 5 * 60;
 
 // 扫码 URL 基础地址（需要根据实际部署环境配置）
-const SCAN_URL_BASE = process.env.NEXT_PUBLIC_SCAN_URL_BASE || "http://localhost:2026/api/auth/scan";
+// const SCAN_URL_BASE = process.env.NEXT_PUBLIC_SCAN_URL_BASE || "http://localhost:2026/api/auth/scan";
+const SCAN_URL_BASE = "http://192.168.200.79:2026/api/auth/scan";
 
 /**
  * 生成登录二维码
