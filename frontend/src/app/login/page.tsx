@@ -21,19 +21,19 @@ export default function LoginPage() {
       case "invalid_workcode":
         return {
           title: "身份验证失败",
-          description: "workCode 无效或已过期，请重新扫码进入",
+          description: "workCode 无效",
           icon: ShieldX,
         };
       case "unauthorized":
         return {
           title: "非法访问",
-          description: "请通过云上鲁南 APP 扫码进入",
+          description: "请通过云上鲁南APP进入",
           icon: AlertCircle,
         };
       default:
         return {
           title: "访问受限",
-          description: "请通过云上鲁南 APP 扫码进入",
+          description: "请通过云上鲁南APP进入",
           icon: ShieldX,
         };
     }
@@ -66,16 +66,9 @@ export default function LoginPage() {
           </p>
           <div className="mt-4 rounded-lg bg-gray-100 p-4 dark:bg-gray-800">
             <p className="text-muted-foreground text-center text-xs">
-              请打开云上鲁南 APP，扫描入口二维码进入系统
+              请使用云上鲁南APP进入
             </p>
           </div>
-          <Button
-            variant="outline"
-            className="mt-4"
-            onClick={() => router.push("/")}
-          >
-            重新进入
-          </Button>
         </CardContent>
       </Card>
     </div>
