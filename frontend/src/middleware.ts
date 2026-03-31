@@ -14,9 +14,6 @@ const USER_AVATAR_COOKIE_NAME = "deerflow_user_avatar";
 
 const BACKEND_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_BASE_URL || "http://gateway:8001";
 
-const TEST_MODE = process.env.NEXT_PUBLIC_TEST_MODE === "true";
-const TEST_WORKCODE = process.env.NEXT_PUBLIC_TEST_WORKCODE || "";
-
 interface ErpSsoResponse {
   code: number;
   msg: string;
@@ -124,9 +121,6 @@ export async function middleware(request: NextRequest) {
     const workCode = request.headers.get("workCode") || request.nextUrl.searchParams.get("workCode");
     let finalWorkCode = workCode;
 
-    if (!finalWorkCode && TEST_MODE && TEST_WORKCODE) {
-      finalWorkCode = TEST_WORKCODE;
-    }
 
     if (!finalWorkCode) {
       return NextResponse.redirect(new URL("/login?error=no_workcode", request.url));
@@ -171,9 +165,6 @@ export async function middleware(request: NextRequest) {
     const workCode = request.headers.get("workCode") || request.nextUrl.searchParams.get("workCode");
     let finalWorkCode = workCode;
 
-    if (!finalWorkCode && TEST_MODE && TEST_WORKCODE) {
-      finalWorkCode = TEST_WORKCODE;
-    }
 
     // ==============================================
     // 有 workCode → 等待认证，绝不提前跳转！
