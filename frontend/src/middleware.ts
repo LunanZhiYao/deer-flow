@@ -115,6 +115,8 @@ export async function middleware(request: NextRequest) {
     const authCookie = request.cookies.get(AUTH_COOKIE_NAME)?.value;
     const userIdCookie = request.cookies.get(USER_ID_COOKIE_NAME)?.value;
 
+    console.log(`[Middleware] 认证Cookie: ${authCookie}, 用户ID Cookie: ${userIdCookie}`);
+
     if (authCookie === "true" && userIdCookie) {
       return NextResponse.redirect(new URL(SUCCESS_REDIRECT_ROUTE, request.url));
     }
@@ -202,7 +204,6 @@ export async function middleware(request: NextRequest) {
     // ==============================================
     return NextResponse.redirect(new URL("/login", request.url));
   }
-
   return NextResponse.next();
 }
 

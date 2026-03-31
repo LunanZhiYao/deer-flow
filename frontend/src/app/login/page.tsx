@@ -21,7 +21,7 @@ export default function LoginPage() {
       case "invalid_workcode":
         return {
           title: "身份验证失败",
-          description: "workCode 无效或已过期，请重新扫码进入",
+          description: "workCode 无效",
           icon: ShieldX,
         };
       case "unauthorized":
@@ -69,13 +69,6 @@ export default function LoginPage() {
               请使用 云上鲁南 进入系统
             </p>
           </div>
-          <Button
-            variant="outline"
-            className="mt-4"
-            onClick={() => router.push("/")}
-          >
-            重新进入
-          </Button>
         </CardContent>
       </Card>
     </div>
