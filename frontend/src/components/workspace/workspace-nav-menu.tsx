@@ -98,7 +98,7 @@ export function WorkspaceNavMenu() {
                     {t.common.settings}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <a
+                  {/* <a
                     href="https://deerflow.tech/"
                     target="_blank"
                     rel="noopener noreferrer"
@@ -107,8 +107,8 @@ export function WorkspaceNavMenu() {
                       <GlobeIcon />
                       {t.workspace.officialWebsite}
                     </DropdownMenuItem>
-                  </a>
-                  <a
+                  </a> */}
+                  {/* <a
                     href="https://github.com/bytedance/deer-flow"
                     target="_blank"
                     rel="noopener noreferrer"
@@ -117,9 +117,9 @@ export function WorkspaceNavMenu() {
                       <GithubIcon />
                       {t.workspace.visitGithub}
                     </DropdownMenuItem>
-                  </a>
-                  <DropdownMenuSeparator />
-                  <a
+                  </a> */}
+                  {/* <DropdownMenuSeparator /> */}
+                  {/* <a
                     href="https://github.com/bytedance/deer-flow/issues"
                     target="_blank"
                     rel="noopener noreferrer"
@@ -128,13 +128,13 @@ export function WorkspaceNavMenu() {
                       <BugIcon />
                       {t.workspace.reportIssue}
                     </DropdownMenuItem>
-                  </a>
-                  <a href="mailto:support@deerflow.tech">
+                  </a> */}
+                  {/* <a href="mailto:support@deerflow.tech">
                     <DropdownMenuItem>
                       <MailIcon />
                       {t.workspace.contactUs}
                     </DropdownMenuItem>
-                  </a>
+                  </a> */}
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem

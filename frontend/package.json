@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "demo:save": "node scripts/save-demo.js",
+    "gen:workcode": "npx tsx scripts/generate-workcode.ts",
     "build": "next build",
     "check": "eslint . --ext .ts,.tsx && tsc --noEmit",
     "dev": "next dev --turbo",

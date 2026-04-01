@@ -1,0 +1,129 @@
+# DeerFlow 配置文件
+# 配置版本号
+config_version: 3
+
+# 日志级别
+log_level: info
+
+# ============================================================================
+# 模型配置
+# ============================================================================
+models:
+  - name: QianYi10
+    display_name: QianYi10
+    use: langchain_openai:ChatOpenAI
+    model: QianYi10
+    api_key: sk-7B8N9M0L1K2J3H4G5F6D7S8A9Q0W1E2R3T4Y5U6I7O8P9L0K1J2H3G4F5D
+    base_url: http://10.0.20.132:8080/v1-openai
+    max_tokens: 4096
+    temperature: 0.7
+    supports_thinking: true  # 启用思考模式支持
+
+# ============================================================================
+# 工具组配置
+# ============================================================================
+tool_groups:
+  - name: web
+  - name: file:read
+  - name: file:write
+  - name: bash
+
+# ============================================================================
+# 工具配置
+# ============================================================================
+tools:
+  # 网页搜索工具 (使用 DuckDuckGo，无需 API key)
+  - name: web_search
+    group: web
+    use: deerflow.community.ddg_search.tools:web_search_tool
+    max_results: 5
+
+  # 网页抓取工具 (使用 Jina AI reader)
+  - name: web_fetch
+    group: web
+    use: deerflow.community.jina_ai.tools:web_fetch_tool
+    timeout: 10
+
+  # 图片搜索工具 (使用 DuckDuckGo)
+  - name: image_search
+    group: web
+    use: deerflow.community.image_search.tools:image_search_tool
+    max_results: 5
+
+  # 文件操作工具
+  - name: ls
+    group: file:read
+    use: deerflow.sandbox.tools:ls_tool
+
+  - name: read_file
+    group: file:read
+    use: deerflow.sandbox.tools:read_file_tool
+
+  - name: write_file
+    group: file:write
+    use: deerflow.sandbox.tools:write_file_tool
+
+  - name: str_replace
+    group: file:write
+    use: deerflow.sandbox.tools:str_replace_tool
+
+  # Bash 执行工具
+  - name: bash
+    group: bash
+    use: deerflow.sandbox.tools:bash_tool
+
+# ============================================================================
+# Sandbox 配置 (本地执行模式)
+# ============================================================================
+sandbox:
+  use: deerflow.sandbox.local:LocalSandboxProvider
+
+# ============================================================================
+# Skills 配置
+# ============================================================================
+skills:
+  container_path: /mnt/skills
+
+# ============================================================================
+# 标题生成配置
+# ============================================================================
+title:
+  enabled: true
+  max_words: 6
+  max_chars: 60
+  model_name: null
+
+# ============================================================================
+# 摘要配置
+# ============================================================================
+summarization:
+  enabled: true
+  model_name: null
+  trigger:
+    - type: tokens
+      value: 15564
+  keep:
+    type: messages
+    value: 10
+  trim_tokens_to_summarize: 15564
+  summary_prompt: null
+
+# ============================================================================
+# 记忆配置
+# ============================================================================
+memory:
+  enabled: true
+  storage_path: memory.json
+  debounce_seconds: 30
+  model_name: null
+  max_facts: 100
+  fact_confidence_threshold: 0.7
+  injection_enabled: true
+  max_injection_tokens: 2000
+
+# ============================================================================
+# Checkpointer 配置
+# ============================================================================
+checkpointer:
+  type: sqlite
+  connection_string: checkpoints.db

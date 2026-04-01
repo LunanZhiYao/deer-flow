@@ -8,13 +8,15 @@ function getBaseOrigin() {
 }
 
 export function getBackendBaseURL() {
-  if (env.NEXT_PUBLIC_BACKEND_BASE_URL) {
-    return new URL(env.NEXT_PUBLIC_BACKEND_BASE_URL, getBaseOrigin())
-      .toString()
-      .replace(/\/+$/, "");
-  } else {
+  if (typeof window !== "undefined") {
     return "";
   }
+  if (env.NEXT_PUBLIC_BACKEND_BASE_URL) {
+    return new URL(env.NEXT_PUBLIC_BACKEND_BASE_URL, "http://localhost:2026")
+      .toString()
+      .replace(/\/+$/, "");
+  }
+  return "http://gateway:8001";
 }
 
 export function getLangGraphBaseURL(isMock?: boolean) {
