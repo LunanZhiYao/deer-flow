@@ -163,7 +163,7 @@ export async function middleware(request: NextRequest) {
     // 先等待认证完成，再决定！
     // ==============================================
     const workCode = request.headers.get("workCode") || request.nextUrl.searchParams.get("workCode");
-    let finalWorkCode = workCode;
+    let finalWorkCode = workCode; 
 
 
     // ==============================================
