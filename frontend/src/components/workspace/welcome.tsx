@@ -78,11 +78,11 @@ export function Welcome({
           ) : (
             <p className="animate-fade-in">{t.welcome.description}</p>
           )}
-          {userId && (
+          {/* {userId && (
             <p className="mt-2 text-xs text-muted-foreground">
               用户ID: {userId}
             </p>
-          )}
+          )} */}
         </div>
       )}
     </div>
