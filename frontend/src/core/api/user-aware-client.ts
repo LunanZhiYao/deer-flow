@@ -48,7 +48,7 @@ function createUserAwareClient(userId: string | null, isMock?: boolean): LangGra
     const enhancedOptions = {
       ...options,
       context: {
-        ...options?.context,
+        ...(options as any)?.context,
         user_id: userId,
       },
     };
