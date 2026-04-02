@@ -7,7 +7,7 @@ import { toast } from "sonner";
 
 import type { PromptInputMessage } from "@/components/ai-elements/prompt-input";
 
-import { getAPIClient } from "../api";
+import { useUserAwareAPIClient } from "../api/user-aware-client";
 import { getBackendBaseURL } from "../config";
 import { useI18n } from "../i18n/hooks";
 import type { FileInMessage } from "../messages/utils";
@@ -64,6 +64,8 @@ export function useThreadStream({
   onToolEnd,
 }: ThreadStreamOptions) {
   const { t } = useI18n();
+  // 使用用户感知的API客户端，确保用户数据隔离
+  const apiClient = useUserAwareAPIClient(isMock);
   // Track the thread ID that is currently streaming to handle thread changes during streaming
   const [onStreamThreadId, setOnStreamThreadId] = useState(() => threadId);
   // Ref to track current thread ID across async callbacks without causing re-renders,
@@ -111,7 +113,7 @@ export function useThreadStream({
   const updateSubtask = useUpdateSubtask();
 
   const thread = useStream<AgentThreadState>({
-    client: getAPIClient(isMock),
+    client: apiClient,
     assistantId: "lead_agent",
     threadId: onStreamThreadId,
     reconnectOnMount: true,
@@ -418,7 +420,8 @@ export function useThreads(
     select: ["thread_id", "updated_at", "values"],
   },
 ) {
-  const apiClient = getAPIClient();
+  // 使用用户感知的API客户端，确保只查询当前用户的线程
+  const apiClient = useUserAwareAPIClient();
   return useQuery<AgentThread[]>({
     queryKey: ["threads", "search", params],
     queryFn: async () => {
@@ -479,7 +482,8 @@ export function useThreads(
 
 export function useDeleteThread() {
   const queryClient = useQueryClient();
-  const apiClient = getAPIClient();
+  // 使用用户感知的API客户端，确保只能删除当前用户的线程
+  const apiClient = useUserAwareAPIClient();
   return useMutation({
     mutationFn: async ({ threadId }: { threadId: string }) => {
       await apiClient.threads.delete(threadId);
@@ -520,7 +524,8 @@ export function useDeleteThread() {
 
 export function useRenameThread() {
   const queryClient = useQueryClient();
-  const apiClient = getAPIClient();
+  // 使用用户感知的API客户端，确保只能重命名当前用户的线程
+  const apiClient = useUserAwareAPIClient();
   return useMutation({
     mutationFn: async ({
       threadId,

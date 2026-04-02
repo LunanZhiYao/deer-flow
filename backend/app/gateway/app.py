@@ -157,6 +157,11 @@ This gateway provides custom endpoints for models, MCP configuration, skills, an
     )
 
     # CORS is handled by nginx - no need for FastAPI middleware
+    
+    # 添加用户认证中间件
+    from app.gateway.middleware import UserAuthMiddleware
+    app.add_middleware(UserAuthMiddleware)
+    logger.info("User authentication middleware added")
 
     # Include routers
     # Models API is mounted at /api/models

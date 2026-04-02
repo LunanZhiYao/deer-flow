@@ -195,6 +195,7 @@ Being proactive with task management demonstrates thoroughness and ensures all r
     return TodoMiddleware(system_prompt=system_prompt, tool_description=tool_description)
 
 
+# UserAuthMiddleware should be first to extract and validate user_id
 # ThreadDataMiddleware must be before SandboxMiddleware to ensure thread_id is available
 # UploadsMiddleware should be after ThreadDataMiddleware to access thread_id
 # DanglingToolCallMiddleware patches missing ToolMessages before model sees the history
@@ -216,7 +217,14 @@ def _build_middlewares(config: RunnableConfig, model_name: str | None, agent_nam
     Returns:
         List of middleware instances.
     """
-    middlewares = build_lead_runtime_middlewares(lazy_init=True)
+    middlewares = []
+    
+    # Add UserAuthMiddleware first to extract and validate user_id
+    from deerflow.agents.middlewares.user_auth_middleware import UserAuthMiddleware
+    middlewares.append(UserAuthMiddleware())
+    
+    # Add runtime middlewares (ThreadData, Uploads, Sandbox, etc.)
+    middlewares.extend(build_lead_runtime_middlewares(lazy_init=True))
 
     # Add summarization middleware if enabled
     summarization_middleware = _create_summarization_middleware()
