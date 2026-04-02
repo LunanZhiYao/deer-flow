@@ -52,8 +52,8 @@ export function WhatsNewSection({ className }: { className?: string }) {
   return (
     <Section
       className={cn("", className)}
-      title="Whats New in DeerFlow 2.0"
-      subtitle="DeerFlow is now evolving from a Deep Research agent into a full-stack Super Agent"
+      title="云千易 新特性"
+      subtitle="云千易正在从一个深度研究智能体演变为全栈超级智能体"
     >
       <div className="flex w-full items-center justify-center">
         <MagicBento data={features} />

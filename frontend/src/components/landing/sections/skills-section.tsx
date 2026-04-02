@@ -15,8 +15,7 @@ export function SkillsSection({ className }: { className?: string }) {
           Agent Skills are loaded progressively — only what&apos;s needed, when
           it&apos;s needed.
           <br />
-          Extend DeerFlow with your own skill files, or use our built-in
-          library.
+          使用您自己的技能文件扩展云千易，或使用我们内置的库。
         </div>
       }
     >
