@@ -22,6 +22,7 @@ export function WorkspaceHeader({ className }: { className?: string }) {
   const pathname = usePathname();
   const userId = useUserId();
   const name = useUserName();
+  
   return (
     <>
       <div
@@ -32,52 +33,59 @@ export function WorkspaceHeader({ className }: { className?: string }) {
       >
         {state === "collapsed" ? (
           <div className="group-has-data-[collapsible=icon]/sidebar-wrapper:-translate-y flex w-full cursor-pointer items-center justify-center">
-            <div className="text-primary block pt-1 font-serif group-hover/workspace-header:hidden">
-              YQY
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E62B34] text-sm font-bold text-white shadow-md group-hover/workspace-header:hidden">
+              云
             </div>
             <SidebarTrigger className="hidden pl-2 group-hover/workspace-header:block" />
           </div>
         ) : (
           <div className="flex items-center justify-between gap-2">
             {env.NEXT_PUBLIC_STATIC_WEBSITE_ONLY === "true" ? (
-              <Link href="/" className="text-primary ml-2 font-serif">
-                云千易
+              <Link href="/" className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E62B34] text-sm font-bold text-white shadow-md">
+                  云
+                </div>
+                <span className="text-lg font-bold text-[#E62B34]">
+                  云千易
+                </span>
               </Link>
             ) : (
-              <div className="text-primary ml-2 cursor-default font-serif">
-                云千易
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E62B34] text-sm font-bold text-white shadow-md">
+                  云
+                </div>
+                <span className="text-lg font-bold text-[#E62B34]">
+                  云千易
+                </span>
               </div>
             )}
             <SidebarTrigger />
           </div>
         )}
       </div>
-      {/* 用户信息显示 */}
+      
       {userId && state !== "collapsed" && (
         <div className="mt-auto flex items-center gap-2 px-2 py-2">
-          <User className="text-muted-foreground h-4 w-4" />
+          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#E62B34] text-xs font-bold text-white">
+            <User className="h-3 w-3" />
+          </div>
           <span className="text-muted-foreground truncate text-xs">
-            用户ID: {userId}
+            {name ? decodeURIComponent(name) : `用户 ${userId.slice(0, 8)}`}
           </span>
         </div>
       )}
-      {name && state !== "collapsed" && (
-        <div className="mt-auto flex items-center gap-2 px-2 py-2">
-          <User className="text-muted-foreground h-4 w-4" />
-          <span className="text-muted-foreground truncate text-xs">
-            用户姓名: {decodeURIComponent(name)}
-          </span>
-        </div>
-      )}
+      
       <SidebarMenu>
         <SidebarMenuItem>
           <SidebarMenuButton
             isActive={pathname === "/workspace/chats/new"}
             asChild
+            className="group relative overflow-hidden rounded-lg transition-all hover:scale-105"
           >
             <Link className="text-muted-foreground" href="/workspace/chats/new">
               <MessageSquarePlus size={16} />
               <span>{t.sidebar.newChat}</span>
+              <div className="absolute inset-0 -z-10 bg-[#E62B34]/10 opacity-0 transition-opacity group-hover:opacity-100" />
             </Link>
           </SidebarMenuButton>
         </SidebarMenuItem>

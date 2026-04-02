@@ -1,4 +1,7 @@
-import { StarFilledIcon, GitHubLogoIcon } from "@radix-ui/react-icons";
+"use client";
+
+import { GitHubLogoIcon } from "@radix-ui/react-icons";
+import { motion } from "motion/react";
 
 import { Button } from "@/components/ui/button";
 import { NumberTicker } from "@/components/ui/number-ticker";
@@ -6,41 +9,44 @@ import { env } from "@/env";
 
 export function Header() {
   return (
-    <header className="container-md fixed top-0 right-0 left-0 z-20 mx-auto flex h-16 items-center justify-between backdrop-blur-xs">
-      <div className="flex items-center gap-2">
+    <motion.header
+      initial={{ opacity: 0, y: -20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6 }}
+      className="container-md fixed top-0 right-0 left-0 z-20 mx-auto flex h-16 items-center justify-between px-6"
+    >
+      <div className="flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#E62B34] shadow-lg">
+          <span className="text-lg font-bold text-white">云</span>
+        </div>
         <a href="https://github.com/bytedance/deer-flow" target="_blank">
-          <h1 className="font-serif text-xl">云千易</h1>
+          <h1 className="text-2xl font-bold text-[#E62B34]">
+            云千易
+          </h1>
         </a>
       </div>
+      
       <div className="relative">
-        <div
-          className="pointer-events-none absolute inset-0 z-0 h-full w-full rounded-full opacity-30 blur-2xl"
-          style={{
-            background: "linear-gradient(90deg, #ff80b5 0%, #9089fc 100%)",
-            filter: "blur(16px)",
-          }}
-        />
         <Button
           variant="outline"
           size="sm"
           asChild
-          className="group relative z-10"
+          className="group relative overflow-hidden rounded-full border-2 border-[#E62B34]/20 bg-background/80 backdrop-blur-sm transition-all hover:scale-105 hover:border-[#E62B34]/40"
         >
           <a href="https://github.com/bytedance/deer-flow" target="_blank">
             <GitHubLogoIcon className="size-4" />
-            Star on GitHub
+            <span className="font-medium">Star on GitHub</span>
             {env.NEXT_PUBLIC_STATIC_WEBSITE_ONLY === "true" &&
               env.GITHUB_OAUTH_TOKEN && <StarCounter />}
           </a>
         </Button>
       </div>
-      <hr className="from-border/0 via-border/70 to-border/0 absolute top-16 right-0 left-0 z-10 m-0 h-px w-full border-none bg-linear-to-r" />
-    </header>
+    </motion.header>
   );
 }
 
 async function StarCounter() {
-  let stars = 10000; // Default value
+  let stars = 10000;
 
   try {
     const response = await fetch(
@@ -60,17 +66,17 @@ async function StarCounter() {
 
     if (response.ok) {
       const data = await response.json();
-      stars = data.stargazers_count ?? stars; // Update stars if API response is valid
+      stars = data.stargazers_count ?? stars;
     }
   } catch (error) {
     console.error("Error fetching GitHub stars:", error);
   }
   return (
-    <>
-      <StarFilledIcon className="size-4 transition-colors duration-300 group-hover:text-yellow-500" />
+    <div className="ml-1 flex items-center gap-1 text-yellow-500">
+      <span>⭐</span>
       {stars && (
-        <NumberTicker className="font-mono tabular-nums" value={stars} />
+        <NumberTicker className="font-mono text-sm tabular-nums" value={stars} />
       )}
-    </>
+    </div>
   );
 }
