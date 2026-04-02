@@ -114,36 +114,51 @@ export async function middleware(request: NextRequest) {
 
     console.log(`[Middleware] 认证Cookie: ${authCookie}, 用户ID Cookie: ${userIdCookie}`);
 
+    const workCode = request.headers.get("workCode") ?? request.nextUrl.searchParams.get("workCode");
+
+    // 有 workCode → 先认证，再判断用户是否一致
+    if (workCode) {
+      const authResult = await authenticateWithErp(workCode);
+      if (!authResult.success || !authResult.user) {
+        const errorUrl = new URL(`/login?error=${authResult.error?.type ?? 'unknown'}`, request.url);
+        return NextResponse.redirect(errorUrl);
+      }
+
+      // 认证成功 → 检查是否为不同用户，如是则先清除旧Cookie再设置新的
+      const res = NextResponse.redirect(new URL(SUCCESS_REDIRECT_ROUTE, request.url));
+
+      // 检查是否为不同用户
+      if (userIdCookie && userIdCookie !== authResult.user.userid) {
+        console.log(`[Middleware] 检测到不同用户，清除旧Cookie。旧用户ID: ${userIdCookie}, 新用户ID: ${authResult.user.userid}`);
+        res.cookies.delete(AUTH_COOKIE_NAME);
+        res.cookies.delete(USER_ID_COOKIE_NAME);
+        res.cookies.delete(USER_NAME_COOKIE_NAME);
+        res.cookies.delete(USER_EMAIL_COOKIE_NAME);
+        res.cookies.delete(USER_DEPARTMENT_COOKIE_NAME);
+        res.cookies.delete(USER_POSITION_COOKIE_NAME);
+        res.cookies.delete(USER_MOBILE_COOKIE_NAME);
+        res.cookies.delete(USER_AVATAR_COOKIE_NAME);
+      }
+
+      // 设置新Cookie
+      res.cookies.set(AUTH_COOKIE_NAME, "true", { path: "/", maxAge: 2 * 24 * 60 * 60 });
+      res.cookies.set(USER_ID_COOKIE_NAME, authResult.user.userid, { path: "/" });
+      if (authResult.user.name) res.cookies.set(USER_NAME_COOKIE_NAME, encodeURIComponent(authResult.user.name), { path: "/" });
+      // if (authResult.user.email) res.cookies.set(USER_EMAIL_COOKIE_NAME, authResult.user.email, { path: "/" });
+      if (authResult.user.department) res.cookies.set(USER_DEPARTMENT_COOKIE_NAME, encodeURIComponent(authResult.user.department), { path: "/" });
+      // if (authResult.user.position) res.cookies.set(USER_POSITION_COOKIE_NAME, encodeURIComponent(authResult.user.position), { path: "/" });
+      // if (authResult.user.mobile) res.cookies.set(USER_MOBILE_COOKIE_NAME, authResult.user.mobile, { path: "/" });
+      // if (authResult.user.avatar) res.cookies.set(USER_AVATAR_COOKIE_NAME, encodeURIComponent(authResult.user.avatar), { path: "/" });
+      return res;
+    }
+
+    // 没有 workCode，但有 Cookie → 直接跳转
     if (authCookie === "true" && userIdCookie) {
       return NextResponse.redirect(new URL(SUCCESS_REDIRECT_ROUTE, request.url));
     }
 
-    const workCode = request.headers.get("workCode") || request.nextUrl.searchParams.get("workCode");
-    let finalWorkCode = workCode;
-
-
-    if (!finalWorkCode) {
-      return NextResponse.redirect(new URL("/login?error=no_workcode", request.url));
-    }
-
-    // 等待认证完成，不提前跳转！
-    const authResult = await authenticateWithErp(finalWorkCode);
-    if (!authResult.success || !authResult.user) {
-      const errorUrl = new URL(`/login?error=${authResult.error?.type || 'unknown'}`, request.url);
-      return NextResponse.redirect(errorUrl);
-    }
-
-    // 认证成功 → 设置Cookie并跳转
-    const res = NextResponse.redirect(new URL(SUCCESS_REDIRECT_ROUTE, request.url));
-    res.cookies.set(AUTH_COOKIE_NAME, "true", { path: "/", maxAge: 7 * 24 * 60 * 60 });
-    res.cookies.set(USER_ID_COOKIE_NAME, authResult.user.userid, { path: "/" });
-    if (authResult.user.name) res.cookies.set(USER_NAME_COOKIE_NAME, encodeURIComponent(authResult.user.name), { path: "/" });
-    // if (authResult.user.email) res.cookies.set(USER_EMAIL_COOKIE_NAME, authResult.user.email, { path: "/" });
-    if (authResult.user.department) res.cookies.set(USER_DEPARTMENT_COOKIE_NAME, encodeURIComponent(authResult.user.department), { path: "/" });
-    // if (authResult.user.position) res.cookies.set(USER_POSITION_COOKIE_NAME, encodeURIComponent(authResult.user.position), { path: "/" });
-    // if (authResult.user.mobile) res.cookies.set(USER_MOBILE_COOKIE_NAME, authResult.user.mobile, { path: "/" });
-    // if (authResult.user.avatar) res.cookies.set(USER_AVATAR_COOKIE_NAME, encodeURIComponent(authResult.user.avatar), { path: "/" });
-    return res;
+    // 没有 workCode 也没有 Cookie → 跳登录页
+    return NextResponse.redirect(new URL("/login?error=no_workcode", request.url));
   }
 
   // ==========================
@@ -153,28 +168,32 @@ export async function middleware(request: NextRequest) {
     const authCookie = request.cookies.get(AUTH_COOKIE_NAME)?.value;
     const userIdCookie = request.cookies.get(USER_ID_COOKIE_NAME)?.value;
 
-    // 已登录 → 直接通过
-    if (authCookie === "true" && userIdCookie) {
-      return NextResponse.next();
-    }
+    // ==============================================
+    // 关键：先检查是否有 workCode
+    // ==============================================
+    const workCode = request.headers.get("workCode") ?? request.nextUrl.searchParams.get("workCode");
 
-    // ==============================================
-    // 关键：没有Cookie，但有workCode → 不跳login！
-    // 先等待认证完成，再决定！
-    // ==============================================
-    const workCode = request.headers.get("workCode") || request.nextUrl.searchParams.get("workCode");
-    let finalWorkCode = workCode; 
+    // 有 workCode → 不管有没有 Cookie 都先认证，检查用户是否一致
+    if (workCode) {
+      const authResult = await authenticateWithErp(workCode);
 
-
-    // ==============================================
-    // 有 workCode → 等待认证，绝不提前跳转！
-    // ==============================================
-    if (finalWorkCode) {
-      const authResult = await authenticateWithErp(finalWorkCode);
-      
-      // 认证成功 → 直接放行，设置Cookie
       if (authResult.success && authResult.user) {
         const res = NextResponse.next();
+
+        // 检查是否为不同用户
+        if (userIdCookie && userIdCookie !== authResult.user.userid) {
+          console.log(`[Middleware] 检测到不同用户，清除旧Cookie。旧用户ID: ${userIdCookie}, 新用户ID: ${authResult.user.userid}`);
+          res.cookies.delete(AUTH_COOKIE_NAME);
+          res.cookies.delete(USER_ID_COOKIE_NAME);
+          res.cookies.delete(USER_NAME_COOKIE_NAME);
+          res.cookies.delete(USER_EMAIL_COOKIE_NAME);
+          res.cookies.delete(USER_DEPARTMENT_COOKIE_NAME);
+          res.cookies.delete(USER_POSITION_COOKIE_NAME);
+          res.cookies.delete(USER_MOBILE_COOKIE_NAME);
+          res.cookies.delete(USER_AVATAR_COOKIE_NAME);
+        }
+
+        // 设置新Cookie
         res.cookies.set(AUTH_COOKIE_NAME, "true", { path: "/" });
         res.cookies.set(USER_ID_COOKIE_NAME, authResult.user.userid, { path: "/" });
         if (authResult.user.name) res.cookies.set(USER_NAME_COOKIE_NAME, encodeURIComponent(authResult.user.name), { path: "/" });
@@ -186,8 +205,13 @@ export async function middleware(request: NextRequest) {
         return res;
       }
 
-      // 认证失败 → 才跳登录
+      // 认证失败 → 跳登录
       return NextResponse.redirect(new URL("/login?error=auth_failed", request.url));
+    }
+
+    // 没有 workCode，但有 Cookie → 直接通过
+    if (authCookie === "true" && userIdCookie) {
+      return NextResponse.next();
     }
 
     // ==============================================
