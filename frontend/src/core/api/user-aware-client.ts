@@ -45,8 +45,17 @@ function createUserAwareClient(userId: string | null, isMock?: boolean): LangGra
   // 包装原始的joinStream方法
   const originalJoinStream = client.runs.joinStream.bind(client.runs);
   client.runs.joinStream = ((threadId, runId, options) => {
+    // 检查 options 是否是 AbortSignal 类型
+    const isAbortSignal = options && typeof options === 'object' && 'aborted' in options;
+
+    if (isAbortSignal) {
+      // 如果是 AbortSignal，直接传递不修改
+      return originalJoinStream(threadId, runId, options);
+    }
+
+    // 否则作为普通对象处理
     const enhancedOptions = {
-      ...options,
+      ...(options as any),
       context: {
         ...(options as any)?.context,
         user_id: userId,
