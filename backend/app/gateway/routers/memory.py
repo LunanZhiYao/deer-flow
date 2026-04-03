@@ -3,6 +3,7 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
+from app.services.user_session import get_current_user_id
 from deerflow.agents.memory.updater import (
     clear_memory_data,
     create_memory_fact,
@@ -108,10 +109,10 @@ class MemoryStatusResponse(BaseModel):
     "/memory",
     response_model=MemoryResponse,
     summary="Get Memory Data",
-    description="Retrieve the current global memory data including user context, history, and facts.",
+    description="Retrieve the current global memory data including user context, history, and facts. Data is isolated by user.",
 )
 async def get_memory() -> MemoryResponse:
-    """Get the current global memory data.
+    """Get the current memory data for the authenticated user.
 
     Returns:
         The current memory data with user context, history, and facts.
@@ -144,7 +145,8 @@ async def get_memory() -> MemoryResponse:
         }
         ```
     """
-    memory_data = get_memory_data()
+    user_id = get_current_user_id()
+    memory_data = get_memory_data(user_id=user_id)
     return MemoryResponse(**memory_data)
 
 
@@ -152,7 +154,7 @@ async def get_memory() -> MemoryResponse:
     "/memory/reload",
     response_model=MemoryResponse,
     summary="Reload Memory Data",
-    description="Reload memory data from the storage file, refreshing the in-memory cache.",
+    description="Reload memory data from the storage file, refreshing the in-memory cache. Data is isolated by user.",
 )
 async def reload_memory() -> MemoryResponse:
     """Reload memory data from file.
@@ -163,7 +165,8 @@ async def reload_memory() -> MemoryResponse:
     Returns:
         The reloaded memory data.
     """
-    memory_data = reload_memory_data()
+    user_id = get_current_user_id()
+    memory_data = reload_memory_data(user_id=user_id)
     return MemoryResponse(**memory_data)
 
 
@@ -171,12 +174,13 @@ async def reload_memory() -> MemoryResponse:
     "/memory",
     response_model=MemoryResponse,
     summary="Clear All Memory Data",
-    description="Delete all saved memory data and reset the memory structure to an empty state.",
+    description="Delete all saved memory data and reset the memory structure to an empty state. Data is isolated by user.",
 )
 async def clear_memory() -> MemoryResponse:
-    """Clear all persisted memory data."""
+    """Clear all persisted memory data for the authenticated user."""
+    user_id = get_current_user_id()
     try:
-        memory_data = clear_memory_data()
+        memory_data = clear_memory_data(user_id=user_id)
     except OSError as exc:
         raise HTTPException(status_code=500, detail="Failed to clear memory data.") from exc
 
@@ -187,15 +191,17 @@ async def clear_memory() -> MemoryResponse:
     "/memory/facts",
     response_model=MemoryResponse,
     summary="Create Memory Fact",
-    description="Create a single saved memory fact manually.",
+    description="Create a single saved memory fact manually. Data is isolated by user.",
 )
 async def create_memory_fact_endpoint(request: FactCreateRequest) -> MemoryResponse:
-    """Create a single fact manually."""
+    """Create a single fact manually for the authenticated user."""
+    user_id = get_current_user_id()
     try:
         memory_data = create_memory_fact(
             content=request.content,
             category=request.category,
             confidence=request.confidence,
+            user_id=user_id,
         )
     except ValueError as exc:
         raise _map_memory_fact_value_error(exc) from exc
@@ -209,12 +215,13 @@ async def create_memory_fact_endpoint(request: FactCreateRequest) -> MemoryRespo
     "/memory/facts/{fact_id}",
     response_model=MemoryResponse,
     summary="Delete Memory Fact",
-    description="Delete a single saved memory fact by its fact id.",
+    description="Delete a single saved memory fact by its fact id. Data is isolated by user.",
 )
 async def delete_memory_fact_endpoint(fact_id: str) -> MemoryResponse:
-    """Delete a single fact from memory by fact id."""
+    """Delete a single fact from memory by fact id for the authenticated user."""
+    user_id = get_current_user_id()
     try:
-        memory_data = delete_memory_fact(fact_id)
+        memory_data = delete_memory_fact(fact_id, user_id=user_id)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=f"Memory fact '{fact_id}' not found.") from exc
     except OSError as exc:
@@ -227,16 +234,18 @@ async def delete_memory_fact_endpoint(fact_id: str) -> MemoryResponse:
     "/memory/facts/{fact_id}",
     response_model=MemoryResponse,
     summary="Patch Memory Fact",
-    description="Partially update a single saved memory fact by its fact id while preserving omitted fields.",
+    description="Partially update a single saved memory fact by its fact id while preserving omitted fields. Data is isolated by user.",
 )
 async def update_memory_fact_endpoint(fact_id: str, request: FactPatchRequest) -> MemoryResponse:
-    """Partially update a single fact manually."""
+    """Partially update a single fact manually for the authenticated user."""
+    user_id = get_current_user_id()
     try:
         memory_data = update_memory_fact(
             fact_id=fact_id,
             content=request.content,
             category=request.category,
             confidence=request.confidence,
+            user_id=user_id,
         )
     except ValueError as exc:
         raise _map_memory_fact_value_error(exc) from exc
@@ -289,7 +298,7 @@ async def get_memory_config_endpoint() -> MemoryConfigResponse:
     "/memory/status",
     response_model=MemoryStatusResponse,
     summary="Get Memory Status",
-    description="Retrieve both memory configuration and current data in a single request.",
+    description="Retrieve both memory configuration and current data in a single request. Data is isolated by user.",
 )
 async def get_memory_status() -> MemoryStatusResponse:
     """Get the memory system status including configuration and data.
@@ -297,8 +306,9 @@ async def get_memory_status() -> MemoryStatusResponse:
     Returns:
         Combined memory configuration and current data.
     """
+    user_id = get_current_user_id()
     config = get_memory_config()
-    memory_data = get_memory_data()
+    memory_data = get_memory_data(user_id=user_id)
 
     return MemoryStatusResponse(
         config=MemoryConfigResponse(

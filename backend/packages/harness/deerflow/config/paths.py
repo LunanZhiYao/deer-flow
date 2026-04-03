@@ -22,6 +22,12 @@ class Paths:
         │       ├── config.yaml
         │       ├── SOUL.md  <-- agent personality/identity (injected alongside lead prompt)
         │       └── memory.json
+        ├── users/
+        │   └── {user_id}/
+        │       ├── memory.json        <-- user-isolated global memory
+        │       └── agents/
+        │           └── {agent_name}/
+        │               └── memory.json  <-- user-isolated agent memory
         └── threads/
             └── {thread_id}/
                 └── user-data/         <-- mounted as /mnt/user-data/ inside sandbox
@@ -91,6 +97,31 @@ class Paths:
     def agent_memory_file(self, name: str) -> Path:
         """Per-agent memory file: `{base_dir}/agents/{name}/memory.json`."""
         return self.agent_dir(name) / "memory.json"
+
+    @property
+    def users_dir(self) -> Path:
+        """Root directory for user-isolated data: `{base_dir}/users/`."""
+        return self.base_dir / "users"
+
+    def user_dir(self, user_id: str) -> Path:
+        """Directory for a specific user's data: `{base_dir}/users/{user_id}/`."""
+        self._validate_user_id(user_id)
+        return self.users_dir / user_id
+
+    def user_memory_file(self, user_id: str) -> Path:
+        """User-isolated global memory file: `{base_dir}/users/{user_id}/memory.json`."""
+        return self.user_dir(user_id) / "memory.json"
+
+    def user_agent_memory_file(self, user_id: str, agent_name: str) -> Path:
+        """User-isolated agent memory file: `{base_dir}/users/{user_id}/agents/{agent_name}/memory.json`."""
+        return self.user_dir(user_id) / "agents" / agent_name.lower() / "memory.json"
+
+    def _validate_user_id(self, user_id: str) -> None:
+        """Validate that the user_id is safe to use in filesystem paths."""
+        if not user_id:
+            raise ValueError("User ID must be a non-empty string.")
+        if not _SAFE_THREAD_ID_RE.match(user_id):
+            raise ValueError(f"Invalid user_id {user_id!r}: only alphanumeric characters, hyphens, and underscores are allowed.")
 
     def thread_dir(self, thread_id: str) -> Path:
         """

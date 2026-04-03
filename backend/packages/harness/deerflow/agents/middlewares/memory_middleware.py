@@ -132,6 +132,16 @@ class MemoryMiddleware(AgentMiddleware[MemoryMiddlewareState]):
             logger.debug("No thread_id in context, skipping memory update")
             return None
 
+        # Get user_id from runtime context or state (set by UserAuthMiddleware)
+        user_id = None
+        if runtime.context:
+            user_id = runtime.context.get("user_id")
+        if not user_id:
+            config_data = get_config()
+            user_id = config_data.get("configurable", {}).get("user_id")
+        if not user_id:
+            user_id = state.get("user_id")
+
         # Get messages from state
         messages = state.get("messages", [])
         if not messages:
@@ -151,6 +161,11 @@ class MemoryMiddleware(AgentMiddleware[MemoryMiddlewareState]):
 
         # Queue the filtered conversation for memory update
         queue = get_memory_queue()
-        queue.add(thread_id=thread_id, messages=filtered_messages, agent_name=self._agent_name)
+        queue.add(
+            thread_id=thread_id,
+            messages=filtered_messages,
+            agent_name=self._agent_name,
+            user_id=user_id,
+        )
 
         return None

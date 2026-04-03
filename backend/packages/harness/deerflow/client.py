@@ -505,7 +505,21 @@ class DeerFlowClient:
         """
         from deerflow.agents.memory.updater import get_memory_data
 
-        return get_memory_data()
+        user_id = self._get_current_user_id()
+        return get_memory_data(user_id=user_id)
+
+    def _get_current_user_id(self) -> str | None:
+        """Get current user ID from request context.
+
+        This is used internally to determine which user's data to access.
+        Returns None for backwards compatibility when no user context is available.
+        """
+        try:
+            from app.services.user_session import get_current_user_id
+
+            return get_current_user_id()
+        except ImportError:
+            return None
 
     def get_model(self, name: str) -> dict | None:
         """Get a specific model's configuration by name.

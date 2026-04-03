@@ -348,11 +348,12 @@ combined with a FastAPI gateway for REST API access [citation:FastAPI](https://f
 """
 
 
-def _get_memory_context(agent_name: str | None = None) -> str:
+def _get_memory_context(agent_name: str | None = None, user_id: str | None = None) -> str:
     """Get memory context for injection into system prompt.
 
     Args:
         agent_name: If provided, loads per-agent memory. If None, loads global memory.
+        user_id: If provided, loads user-isolated memory. If None, loads global memory.
 
     Returns:
         Formatted memory context string wrapped in XML tags, or empty string if disabled.
@@ -360,12 +361,20 @@ def _get_memory_context(agent_name: str | None = None) -> str:
     try:
         from deerflow.agents.memory import format_memory_for_injection, get_memory_data
         from deerflow.config.memory_config import get_memory_config
+        from langgraph.config import get_config
 
         config = get_memory_config()
         if not config.enabled or not config.injection_enabled:
             return ""
 
-        memory_data = get_memory_data(agent_name)
+        if user_id is None:
+            try:
+                config_data = get_config()
+                user_id = config_data.get("configurable", {}).get("user_id")
+            except Exception:
+                pass
+
+        memory_data = get_memory_data(agent_name, user_id)
         memory_content = format_memory_for_injection(memory_data, max_tokens=config.max_injection_tokens)
 
         if not memory_content.strip():
