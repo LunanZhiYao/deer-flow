@@ -264,6 +264,8 @@ tools:
     group: web
     use: deerflow.community.ddg_search.tools:web_search_tool
     max_results: 5
+    # Search region: cn-zh (Chinese), wt-wt (worldwide), us-en (US English)
+    region: cn-zh
 
   # Web search tool (requires Tavily API key)
   # - name: web_search
@@ -283,7 +285,7 @@ tools:
   - name: web_fetch
     group: web
     use: deerflow.community.jina_ai.tools:web_fetch_tool
-    timeout: 10
+    timeout: 30
 
   # Web fetch tool (uses InfoQuest)
   # - name: web_fetch

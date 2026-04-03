@@ -37,12 +37,14 @@ tools:
     group: web
     use: deerflow.community.ddg_search.tools:web_search_tool
     max_results: 5
+    # 搜索区域: cn-zh (中文), wt-wt (全球), us-en (英文)
+    region: cn-zh
 
   # 网页抓取工具 (使用 Jina AI reader)
   - name: web_fetch
     group: web
     use: deerflow.community.jina_ai.tools:web_fetch_tool
-    timeout: 10
+    timeout: 30
 
   # 图片搜索工具 (使用 DuckDuckGo)
   - name: image_search
