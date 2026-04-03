@@ -82,7 +82,7 @@ export function WorkspaceHeader({ className }: { className?: string }) {
             asChild
             className="group relative overflow-hidden rounded-lg transition-all hover:scale-105"
           >
-            <Link className="text-muted-foreground" href="/workspace/chats/new">
+            <Link className="hover:text-white" href="/workspace/chats/new">
               <MessageSquarePlus size={16} />
               <span>{t.sidebar.newChat}</span>
               <div className="absolute inset-0 -z-10 bg-[#E62B34]/10 opacity-0 transition-opacity group-hover:opacity-100" />

@@ -471,7 +471,7 @@ export function InputBox({
                     <PromptInputActionMenuItem
                       className={cn(
                         context.mode === "flash"
-                          ? "text-accent-foreground"
+                          ? "text-primary font-semibold"
                           : "text-muted-foreground/65",
                       )}
                       onSelect={() => handleModeSelect("flash")}
@@ -482,7 +482,7 @@ export function InputBox({
                             className={cn(
                               "mr-2 size-4",
                               context.mode === "flash" &&
-                                "text-accent-foreground",
+                                "text-primary",
                             )}
                           />
                           {t.inputBox.flashMode}
@@ -492,7 +492,7 @@ export function InputBox({
                         </div>
                       </div>
                       {context.mode === "flash" ? (
-                        <CheckIcon className="ml-auto size-4" />
+                        <CheckIcon className="ml-auto size-4 text-primary" />
                       ) : (
                         <div className="ml-auto size-4" />
                       )}
@@ -501,7 +501,7 @@ export function InputBox({
                       <PromptInputActionMenuItem
                         className={cn(
                           context.mode === "thinking"
-                            ? "text-accent-foreground"
+                            ? "text-primary font-semibold"
                             : "text-muted-foreground/65",
                         )}
                         onSelect={() => handleModeSelect("thinking")}
@@ -512,7 +512,7 @@ export function InputBox({
                               className={cn(
                                 "mr-2 size-4",
                                 context.mode === "thinking" &&
-                                  "text-accent-foreground",
+                                  "text-primary",
                               )}
                             />
                             {t.inputBox.reasoningMode}
@@ -522,7 +522,7 @@ export function InputBox({
                           </div>
                         </div>
                         {context.mode === "thinking" ? (
-                          <CheckIcon className="ml-auto size-4" />
+                          <CheckIcon className="ml-auto size-4 text-primary" />
                         ) : (
                           <div className="ml-auto size-4" />
                         )}
@@ -531,7 +531,7 @@ export function InputBox({
                     <PromptInputActionMenuItem
                       className={cn(
                         context.mode === "pro"
-                          ? "text-accent-foreground"
+                          ? "text-primary font-semibold"
                           : "text-muted-foreground/65",
                       )}
                       onSelect={() => handleModeSelect("pro")}
@@ -542,7 +542,7 @@ export function InputBox({
                             className={cn(
                               "mr-2 size-4",
                               context.mode === "pro" &&
-                                "text-accent-foreground",
+                                "text-primary",
                             )}
                           />
                           {t.inputBox.proMode}
@@ -552,7 +552,7 @@ export function InputBox({
                         </div>
                       </div>
                       {context.mode === "pro" ? (
-                        <CheckIcon className="ml-auto size-4" />
+                        <CheckIcon className="ml-auto size-4 text-primary" />
                       ) : (
                         <div className="ml-auto size-4" />
                       )}
@@ -560,7 +560,7 @@ export function InputBox({
                     <PromptInputActionMenuItem
                       className={cn(
                         context.mode === "ultra"
-                          ? "text-accent-foreground"
+                          ? "text-primary font-semibold"
                           : "text-muted-foreground/65",
                       )}
                       onSelect={() => handleModeSelect("ultra")}
@@ -586,7 +586,7 @@ export function InputBox({
                         </div>
                       </div>
                       {context.mode === "ultra" ? (
-                        <CheckIcon className="ml-auto size-4" />
+                        <CheckIcon className="ml-auto size-4 text-[#dabb5e]" />
                       ) : (
                         <div className="ml-auto size-4" />
                       )}
