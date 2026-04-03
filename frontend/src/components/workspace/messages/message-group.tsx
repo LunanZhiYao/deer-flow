@@ -12,7 +12,9 @@ import {
   SquareTerminalIcon,
   WrenchIcon,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+
+import { logger } from "@/core/logger";
 
 import {
   ChainOfThought,
@@ -56,6 +58,17 @@ export function MessageGroup({
     env.NEXT_PUBLIC_STATIC_WEBSITE_ONLY === "true",
   );
   const steps = useMemo(() => convertToSteps(messages), [messages]);
+
+  useEffect(() => {
+    if (messages.length > 0 && !isLoading) {
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage?.type === "ai") {
+        logger.info("显示数据", "AI消息已显示", {
+          hasToolCalls: !!(lastMessage.tool_calls && lastMessage.tool_calls.length > 0),
+        });
+      }
+    }
+  }, [messages.length, isLoading]);
   const lastToolCallStep = useMemo(() => {
     const filteredSteps = steps.filter((step) => step.type === "toolCall");
     return filteredSteps[filteredSteps.length - 1];

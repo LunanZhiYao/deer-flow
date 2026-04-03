@@ -6,6 +6,7 @@ import { Toaster } from "sonner";
 
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { CommandPalette } from "@/components/workspace/command-palette";
+import { LoggerWindow } from "@/components/workspace/logger-window";
 import { WorkspaceSidebar } from "@/components/workspace/workspace-sidebar";
 import { getLocalSettings, useLocalSettings } from "@/core/settings";
 
@@ -42,6 +43,7 @@ export default function WorkspaceLayout({
       </SidebarProvider>
       <CommandPalette />
       <Toaster position="top-center" />
+      <LoggerWindow />
     </QueryClientProvider>
   );
 }

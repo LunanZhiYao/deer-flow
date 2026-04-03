@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import type { PromptInputMessage } from "@/components/ai-elements/prompt-input";
 
+import { logger } from "../logger";
 import { useUserAwareAPIClient } from "../api/user-aware-client";
 import { getBackendBaseURL } from "../config";
 import { useI18n } from "../i18n/hooks";
@@ -123,7 +124,11 @@ export function useThreadStream({
       setOnStreamThreadId(meta.thread_id);
     },
     onLangChainEvent(event) {
+      if (event.event === "on_tool_start") {
+        logger.info("工具调用", `开始调用工具: ${event.name}`, { tool: event.name });
+      }
       if (event.event === "on_tool_end") {
+        logger.info("工具调用完成", `工具调用完成: ${event.name}`, { tool: event.name });
         listeners.current.onToolEnd?.({
           name: event.name,
           data: event.data,
@@ -179,6 +184,7 @@ export function useThreadStream({
       toast.error(getStreamErrorMessage(error));
     },
     onFinish(state) {
+      logger.info("返回数据", "收到后端返回数据", { messageCount: state.values?.messages?.length });
       listeners.current.onFinish?.(state.values);
       void queryClient.invalidateQueries({ queryKey: ["threads", "search"] });
     },
@@ -213,6 +219,8 @@ export function useThreadStream({
       sendInFlightRef.current = true;
 
       const text = message.text.trim();
+      const endSendTimer = logger.startTimer("前端发送文字", text ? `发送消息: ${text.substring(0, 50)}${text.length > 50 ? "..." : ""}` : "发送消息");
+      logger.info("前端发送文字", "准备发送消息", { text: text.substring(0, 100), hasFiles: !!(message.files && message.files.length > 0) });
 
       // Capture current count before showing optimistic messages
       prevMsgCountRef.current = thread.messages.length;
@@ -346,6 +354,9 @@ export function useThreadStream({
           }),
         );
 
+        logger.info("调用大模型", "开始调用大模型", { mode: context.mode });
+        const endModelTimer = logger.startTimer("大模型处理", "大模型处理中...");
+
         await thread.submit(
           {
             messages: [
@@ -388,8 +399,15 @@ export function useThreadStream({
             },
           },
         );
+
+        endModelTimer("大模型处理完成");
+        logger.info("大模型调用成功", "大模型调用成功");
+        endSendTimer("消息发送完成");
+        logger.info("完成任务", "整个流程完成");
+
         void queryClient.invalidateQueries({ queryKey: ["threads", "search"] });
       } catch (error) {
+        logger.error("系统", "处理失败", error);
         setOptimisticMessages([]);
         setIsUploading(false);
         throw error;
