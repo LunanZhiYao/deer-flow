@@ -33,27 +33,33 @@ export function WorkspaceHeader({ className }: { className?: string }) {
       >
         {state === "collapsed" ? (
           <div className="group-has-data-[collapsible=icon]/sidebar-wrapper:-translate-y flex w-full cursor-pointer items-center justify-center">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E62B34] text-sm font-bold text-white shadow-md group-hover/workspace-header:hidden">
-              云
-            </div>
+            <img 
+              src="/favicon.ico" 
+              alt="云千易" 
+              className="h-8 w-8 rounded-lg shadow-md group-hover/workspace-header:hidden"
+            />
             <SidebarTrigger className="hidden pl-2 group-hover/workspace-header:block" />
           </div>
         ) : (
           <div className="flex items-center justify-between gap-2">
             {env.NEXT_PUBLIC_STATIC_WEBSITE_ONLY === "true" ? (
               <Link href="/" className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E62B34] text-sm font-bold text-white shadow-md">
-                  云
-                </div>
+                <img 
+                  src="/favicon.ico" 
+                  alt="云千易" 
+                  className="h-8 w-8 rounded-lg shadow-md"
+                />
                 <span className="text-lg font-bold text-[#E62B34]">
                   云千易
                 </span>
               </Link>
             ) : (
               <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E62B34] text-sm font-bold text-white shadow-md">
-                  云
-                </div>
+                <img 
+                  src="/favicon.ico" 
+                  alt="云千易" 
+                  className="h-8 w-8 rounded-lg shadow-md"
+                />
                 <span className="text-lg font-bold text-[#E62B34]">
                   云千易
                 </span>

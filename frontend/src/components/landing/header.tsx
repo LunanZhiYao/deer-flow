@@ -16,9 +16,11 @@ export function Header() {
       className="container-md fixed top-0 right-0 left-0 z-20 mx-auto flex h-16 items-center justify-between px-6"
     >
       <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#E62B34] shadow-lg">
-          <span className="text-lg font-bold text-white">云</span>
-        </div>
+        <img 
+          src="/favicon.ico" 
+          alt="云千易" 
+          className="h-10 w-10 rounded-xl shadow-lg"
+        />
         <a href="https://github.com/bytedance/deer-flow" target="_blank">
           <h1 className="text-2xl font-bold text-[#E62B34]">
             云千易

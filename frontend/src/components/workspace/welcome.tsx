@@ -5,7 +5,7 @@ import { useEffect, useMemo } from "react";
 import { motion } from "motion/react";
 
 import { useI18n } from "@/core/i18n/hooks";
-import { useAuth } from "@/core/auth";
+import { useAuth, useUserName } from "@/core/auth";
 import { cn } from "@/lib/utils";
 
 import { AuroraText } from "../ui/aurora-text";
@@ -22,6 +22,7 @@ export function Welcome({
   const { t } = useI18n();
   const searchParams = useSearchParams();
   const { userId } = useAuth();
+  const userName = useUserName();
   const isUltra = useMemo(() => mode === "ultra", [mode]);
   const colors = useMemo(() => {
     if (isUltra) {
@@ -29,6 +30,14 @@ export function Welcome({
     }
     return ["var(--color-foreground)"];
   }, [isUltra]);
+  
+  const greetingWithName = useMemo(() => {
+    if (userName) {
+      const decodedName = decodeURIComponent(userName);
+      return `你好，${decodedName}！欢迎回来！`;
+    }
+    return t.welcome.greeting;
+  }, [userName, t.welcome.greeting]);
   
   useEffect(() => {
     waved = true;
@@ -77,7 +86,7 @@ export function Welcome({
               {isUltra ? "🚀" : "👋"}
             </motion.div>
             <AuroraText colors={colors} className="text-4xl">
-              {t.welcome.greeting}
+              {greetingWithName}
             </AuroraText>
           </div>
         )}
