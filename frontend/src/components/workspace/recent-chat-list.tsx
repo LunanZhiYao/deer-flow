@@ -57,6 +57,7 @@ import type { AgentThread, AgentThreadState } from "@/core/threads/types";
 import { pathOfThread, titleOfThread } from "@/core/threads/utils";
 import { env } from "@/env";
 import { isIMEComposing } from "@/lib/ime";
+import { copyToClipboard } from "@/lib/utils";
 
 export function RecentChatList() {
   const { t } = useI18n();
@@ -119,10 +120,10 @@ export function RecentChatList() {
       // On localhost: use Vercel URL; On production: use current origin
       const baseUrl = isLocalhost ? VERCEL_URL : window.location.origin;
       const shareUrl = `${baseUrl}/workspace/chats/${threadId}`;
-      try {
-        await navigator.clipboard.writeText(shareUrl);
+      const success = await copyToClipboard(shareUrl);
+      if (success) {
         toast.success(t.clipboard.linkCopied);
-      } catch {
+      } else {
         toast.error(t.clipboard.failedToCopyToClipboard);
       }
     },

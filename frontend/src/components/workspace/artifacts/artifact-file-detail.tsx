@@ -36,7 +36,7 @@ import { installSkill } from "@/core/skills/api";
 import { streamdownPlugins } from "@/core/streamdown";
 import { checkCodeFile, getFileName } from "@/core/utils/files";
 import { env } from "@/env";
-import { cn } from "@/lib/utils";
+import { cn, copyToClipboard } from "@/lib/utils";
 
 import { ArtifactLink } from "../citations/artifact-link";
 import { useThread } from "../messages/context";
@@ -202,12 +202,11 @@ export function ArtifactFileDetail({
                 label={t.clipboard.copyToClipboard}
                 disabled={!content}
                 onClick={async () => {
-                  try {
-                    await navigator.clipboard.writeText(displayContent ?? "");
+                  const success = await copyToClipboard(displayContent ?? "");
+                  if (success) {
                     toast.success(t.clipboard.copiedToClipboard);
-                  } catch (error) {
+                  } else {
                     toast.error("Failed to copy to clipboard");
-                    console.error(error);
                   }
                 }}
                 tooltip={t.clipboard.copyToClipboard}
