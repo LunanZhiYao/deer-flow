@@ -12,6 +12,7 @@ import {
   XIcon,
   ZapIcon,
 } from "lucide-react";
+import { useSuggestionsConfig } from "@/core/api/use-suggestions-config";
 import { useSearchParams } from "next/navigation";
 import {
   useCallback,
@@ -309,7 +310,17 @@ export function InputBox({
     setTimeout(() => requestFormSubmit(), 0);
   }, [pendingSuggestion, requestFormSubmit, textInput]);
 
+  const { config: suggestionsConfig } = useSuggestionsConfig();
+
   useEffect(() => {
+    // 如果建议功能未启用，直接返回
+    if (!suggestionsConfig.enabled) {
+      setFollowupsHidden(true);
+      setFollowupsLoading(false);
+      setFollowups([]);
+      return;
+    }
+
     const streaming = status === "streaming";
     const wasStreaming = wasStreamingRef.current;
     wasStreamingRef.current = streaming;
@@ -352,7 +363,7 @@ export function InputBox({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         messages: recent,
-        n: 3,
+        n: suggestionsConfig.max_suggestions,
         model_name: context.model_name ?? undefined,
       }),
       signal: controller.signal,
@@ -367,7 +378,7 @@ export function InputBox({
         const suggestions = (data.suggestions ?? [])
           .map((s) => (typeof s === "string" ? s.trim() : ""))
           .filter((s) => s.length > 0)
-          .slice(0, 5);
+          .slice(0, suggestionsConfig.max_suggestions);
         setFollowups(suggestions);
       })
       .catch(() => {
@@ -378,7 +389,7 @@ export function InputBox({
       });
 
     return () => controller.abort();
-  }, [context.model_name, disabled, isMock, status, thread.messages, threadId]);
+  }, [context.model_name, disabled, isMock, status, thread.messages, threadId, suggestionsConfig]);
 
   return (
     <div ref={promptRootRef} className="relative">
@@ -471,7 +482,7 @@ export function InputBox({
                     <PromptInputActionMenuItem
                       className={cn(
                         context.mode === "flash"
-                          ? "text-accent-foreground"
+                          ? "text-foreground"
                           : "text-muted-foreground/65",
                       )}
                       onSelect={() => handleModeSelect("flash")}
@@ -482,7 +493,7 @@ export function InputBox({
                             className={cn(
                               "mr-2 size-4",
                               context.mode === "flash" &&
-                                "text-accent-foreground",
+                                "text-foreground",
                             )}
                           />
                           {t.inputBox.flashMode}
@@ -501,7 +512,7 @@ export function InputBox({
                       <PromptInputActionMenuItem
                         className={cn(
                           context.mode === "thinking"
-                            ? "text-accent-foreground"
+                            ? "text-foreground"
                             : "text-muted-foreground/65",
                         )}
                         onSelect={() => handleModeSelect("thinking")}
@@ -512,7 +523,7 @@ export function InputBox({
                               className={cn(
                                 "mr-2 size-4",
                                 context.mode === "thinking" &&
-                                  "text-accent-foreground",
+                                  "text-foreground",
                               )}
                             />
                             {t.inputBox.reasoningMode}
@@ -531,7 +542,7 @@ export function InputBox({
                     <PromptInputActionMenuItem
                       className={cn(
                         context.mode === "pro"
-                          ? "text-accent-foreground"
+                          ? "text-foreground"
                           : "text-muted-foreground/65",
                       )}
                       onSelect={() => handleModeSelect("pro")}
@@ -542,7 +553,7 @@ export function InputBox({
                             className={cn(
                               "mr-2 size-4",
                               context.mode === "pro" &&
-                                "text-accent-foreground",
+                                "text-foreground",
                             )}
                           />
                           {t.inputBox.proMode}
@@ -619,7 +630,7 @@ export function InputBox({
                       <PromptInputActionMenuItem
                         className={cn(
                           context.reasoning_effort === "minimal"
-                            ? "text-accent-foreground"
+                            ? "text-foreground"
                             : "text-muted-foreground/65",
                         )}
                         onSelect={() => handleReasoningEffortSelect("minimal")}
@@ -641,7 +652,7 @@ export function InputBox({
                       <PromptInputActionMenuItem
                         className={cn(
                           context.reasoning_effort === "low"
-                            ? "text-accent-foreground"
+                            ? "text-foreground"
                             : "text-muted-foreground/65",
                         )}
                         onSelect={() => handleReasoningEffortSelect("low")}
@@ -664,7 +675,7 @@ export function InputBox({
                         className={cn(
                           context.reasoning_effort === "medium" ||
                             !context.reasoning_effort
-                            ? "text-accent-foreground"
+                            ? "text-foreground"
                             : "text-muted-foreground/65",
                         )}
                         onSelect={() => handleReasoningEffortSelect("medium")}
@@ -687,7 +698,7 @@ export function InputBox({
                       <PromptInputActionMenuItem
                         className={cn(
                           context.reasoning_effort === "high"
-                            ? "text-accent-foreground"
+                            ? "text-foreground"
                             : "text-muted-foreground/65",
                         )}
                         onSelect={() => handleReasoningEffortSelect("high")}
