@@ -21,6 +21,7 @@ from deerflow.config.title_config import load_title_config_from_dict
 from deerflow.config.token_usage_config import TokenUsageConfig
 from deerflow.config.tool_config import ToolConfig, ToolGroupConfig
 from deerflow.config.tool_search_config import ToolSearchConfig, load_tool_search_config_from_dict
+from deerflow.config.suggestions_config import load_suggestions_config_from_dict
 
 load_dotenv()
 
@@ -99,6 +100,10 @@ class AppConfig(BaseModel):
         # Load summarization config if present
         if "summarization" in config_data:
             load_summarization_config_from_dict(config_data["summarization"])
+
+        # Load suggestions config if present
+        if "suggestions" in config_data:
+            load_suggestions_config_from_dict(config_data["suggestions"])
 
         # Load memory config if present
         if "memory" in config_data:

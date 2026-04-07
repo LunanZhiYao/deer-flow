@@ -37,6 +37,8 @@ export interface Translations {
     exportAsMarkdown: string;
     exportAsJSON: string;
     exportSuccess: string;
+    yes: string;
+    no: string;
   };
 
   // Welcome
@@ -242,6 +244,7 @@ export interface Translations {
       skills: string;
       notification: string;
       about: string;
+      suggestions: string;
     };
     memory: {
       title: string;
@@ -342,6 +345,15 @@ export interface Translations {
       testBody: string;
       notSupported: string;
       disableNotification: string;
+    };
+    suggestions: {
+      description: string;
+      enabled: string;
+      enabledDescription: string;
+      maxSuggestions: string;
+      maxSuggestionsDescription: string;
+      modelName: string;
+      modelNameDescription: string;
     };
     acknowledge: {
       emptyTitle: string;

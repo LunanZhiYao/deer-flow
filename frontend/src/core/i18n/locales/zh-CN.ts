@@ -47,7 +47,9 @@ export const zhCN: Translations = {
     export: "导出",
     exportAsMarkdown: "导出为 Markdown",
     exportAsJSON: "导出为 JSON",
-    exportSuccess: "对话已导出",
+    exportSuccess: "导出成功",
+    yes: "是",
+    no: "否",
   },
 
   // Welcome
@@ -290,8 +292,9 @@ export const zhCN: Translations = {
       memory: "记忆",
       tools: "工具",
       skills: "技能",
-      notification: "通知",
-      about: "关于",
+    notification: "通知",
+    about: "关于",
+    suggestions: "建议设置",
     },
     memory: {
       title: "记忆",
@@ -399,6 +402,15 @@ export const zhCN: Translations = {
       testBody: "这是一条测试通知。",
       notSupported: "当前浏览器不支持通知功能。",
       disableNotification: "关闭通知",
+    },
+    suggestions: {
+      description: "管理对话结束后建议问题的生成和显示",
+      enabled: "启用建议功能",
+      enabledDescription: "是否在对话结束后自动生成并显示后续建议问题",
+      maxSuggestions: "最大建议数量",
+      maxSuggestionsDescription: "每个对话结束后显示的最大建议问题数量",
+      modelName: "使用模型",
+      modelNameDescription: "用于生成建议问题的AI模型",
     },
     acknowledge: {
       emptyTitle: "致谢",

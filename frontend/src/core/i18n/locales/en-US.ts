@@ -47,7 +47,9 @@ export const enUS: Translations = {
     export: "Export",
     exportAsMarkdown: "Export as Markdown",
     exportAsJSON: "Export as JSON",
-    exportSuccess: "Conversation exported",
+    exportSuccess: "Export successful",
+    yes: "Yes",
+    no: "No",
   },
 
   // Welcome
@@ -304,8 +306,9 @@ export const enUS: Translations = {
       memory: "Memory",
       tools: "Tools",
       skills: "Skills",
-      notification: "Notification",
-      about: "About",
+    notification: "Notifications",
+    about: "About",
+    suggestions: "Suggestions",
     },
     memory: {
       title: "Memory",
@@ -415,6 +418,15 @@ export const enUS: Translations = {
       testBody: "This is a test notification.",
       notSupported: "Your browser does not support notifications.",
       disableNotification: "Disable notification",
+    },
+    suggestions: {
+      description: "Manage the generation and display of follow-up suggestions after conversations",
+      enabled: "Enable Suggestions",
+      enabledDescription: "Whether to automatically generate and display follow-up suggestions after each conversation",
+      maxSuggestions: "Max Suggestions",
+      maxSuggestionsDescription: "Maximum number of follow-up suggestions to display after each conversation",
+      modelName: "Model Name",
+      modelNameDescription: "AI model used to generate follow-up suggestions",
     },
     acknowledge: {
       emptyTitle: "Acknowledgements",

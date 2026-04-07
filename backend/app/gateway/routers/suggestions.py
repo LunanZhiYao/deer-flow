@@ -4,6 +4,7 @@ import logging
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
+from deerflow.config.suggestions_config import get_suggestions_config, SuggestionsConfig
 from deerflow.models import create_chat_model
 
 logger = logging.getLogger(__name__)
@@ -20,6 +21,13 @@ class SuggestionsRequest(BaseModel):
     messages: list[SuggestionMessage] = Field(..., description="Recent conversation messages")
     n: int = Field(default=3, ge=1, le=5, description="Number of suggestions to generate")
     model_name: str | None = Field(default=None, description="Optional model override")
+
+
+class SuggestionsConfigResponse(BaseModel):
+    """Response model for suggestions configuration."""
+    enabled: bool = Field(..., description="Whether suggestions generation is enabled")
+    model_name: str | None = Field(None, description="Model name to use for suggestions generation (None = use default model)")
+    max_suggestions: int = Field(..., description="Maximum number of suggestions to generate")
 
 
 class SuggestionsResponse(BaseModel):
@@ -91,6 +99,35 @@ def _format_conversation(messages: list[SuggestionMessage]) -> str:
     return "\n".join(parts).strip()
 
 
+@router.get(
+    "/suggestions/config",
+    response_model=SuggestionsConfigResponse,
+    summary="Get Suggestions Configuration",
+    description="Retrieve the current suggestions generation configuration.",
+)
+async def get_suggestions_configuration() -> SuggestionsConfigResponse:
+    """Get the current suggestions generation configuration.
+
+    Returns:
+        The current suggestions configuration with all settings.
+
+    Example:
+        ```json
+        {
+            "enabled": true,
+            "model_name": null,
+            "max_suggestions": 3
+        }
+        ```
+    """
+    config = get_suggestions_config()
+    return SuggestionsConfigResponse(
+        enabled=config.enabled,
+        model_name=config.model_name,
+        max_suggestions=config.max_suggestions,
+    )
+
+
 @router.post(
     "/threads/{thread_id}/suggestions",
     response_model=SuggestionsResponse,
@@ -98,6 +135,11 @@ def _format_conversation(messages: list[SuggestionMessage]) -> str:
     description="Generate short follow-up questions a user might ask next, based on recent conversation context.",
 )
 async def generate_suggestions(thread_id: str, request: SuggestionsRequest) -> SuggestionsResponse:
+    # Check if suggestions generation is enabled
+    config = get_suggestions_config()
+    if not config.enabled:
+        return SuggestionsResponse(suggestions=[])
+        
     if not request.messages:
         return SuggestionsResponse(suggestions=[])
 
