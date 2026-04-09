@@ -43,27 +43,33 @@ class TitleMiddleware(AgentMiddleware[TitleMiddlewareState]):
 
         return ""
 
-    def _should_generate_title(self, state: TitleMiddlewareState) -> bool:
-        """Check if we should generate a title for this thread."""
+    def _should_set_title(self, state: TitleMiddlewareState) -> tuple[bool, bool]:
+        """Check if we should set a title for this thread.
+
+        Returns (should_set, use_simple_title):
+        - should_set: whether to set a title at all
+        - use_simple_title: if True, use first 30 chars of user message; if False, use LLM to generate
+        """
         config = get_title_config()
-        if not config.enabled:
-            return False
 
         # Check if thread already has a title in state
         if state.get("title"):
-            return False
+            return False, False
 
-        # Check if this is the first turn (has at least one user message and one assistant response)
         messages = state.get("messages", [])
-        if len(messages) < 2:
-            return False
-
-        # Count user and assistant messages
         user_messages = [m for m in messages if m.type == "human"]
-        assistant_messages = [m for m in messages if m.type == "ai"]
 
-        # Generate title after first complete exchange
-        return len(user_messages) == 1 and len(assistant_messages) >= 1
+        # Need at least one user message
+        if len(user_messages) < 1:
+            return False, False
+
+        if not config.enabled:
+            # When title generation is disabled, set title immediately after first user message
+            return len(user_messages) == 1, True
+
+        # When title generation is enabled, wait for first complete exchange
+        assistant_messages = [m for m in messages if m.type == "ai"]
+        return len(user_messages) == 1 and len(assistant_messages) >= 1, False
 
     def _build_title_prompt(self, state: TitleMiddlewareState) -> tuple[str, str]:
         """Extract user/assistant messages and build the title prompt.
@@ -102,10 +108,21 @@ class TitleMiddleware(AgentMiddleware[TitleMiddlewareState]):
 
     def _generate_title_result(self, state: TitleMiddlewareState) -> dict | None:
         """Synchronously generate a title. Returns state update or None."""
-        if not self._should_generate_title(state):
+        should_set, use_simple_title = self._should_set_title(state)
+        if not should_set:
             return None
 
-        prompt, user_msg = self._build_title_prompt(state)
+        messages = state.get("messages", [])
+        user_msg_content = next((m.content for m in messages if m.type == "human"), "")
+        user_msg = self._normalize_content(user_msg_content)
+
+        if use_simple_title:
+            # Use first 30 characters of user message as title
+            title = user_msg[:30].rstrip() if len(user_msg) > 30 else user_msg
+            return {"title": title if title else "New Conversation"}
+
+        # Use LLM to generate title
+        prompt, _ = self._build_title_prompt(state)
         config = get_title_config()
         model = create_chat_model(name=config.model_name, thinking_enabled=False)
 
@@ -122,10 +139,21 @@ class TitleMiddleware(AgentMiddleware[TitleMiddlewareState]):
 
     async def _agenerate_title_result(self, state: TitleMiddlewareState) -> dict | None:
         """Asynchronously generate a title. Returns state update or None."""
-        if not self._should_generate_title(state):
+        should_set, use_simple_title = self._should_set_title(state)
+        if not should_set:
             return None
 
-        prompt, user_msg = self._build_title_prompt(state)
+        messages = state.get("messages", [])
+        user_msg_content = next((m.content for m in messages if m.type == "human"), "")
+        user_msg = self._normalize_content(user_msg_content)
+
+        if use_simple_title:
+            # Use first 30 characters of user message as title
+            title = user_msg[:30].rstrip() if len(user_msg) > 30 else user_msg
+            return {"title": title if title else "New Conversation"}
+
+        # Use LLM to generate title
+        prompt, _ = self._build_title_prompt(state)
         config = get_title_config()
         model = create_chat_model(name=config.model_name, thinking_enabled=False)
 
