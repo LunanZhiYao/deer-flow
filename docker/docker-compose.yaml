@@ -69,7 +69,7 @@ services:
     volumes:
       - ${DEER_FLOW_CONFIG_PATH}:/app/backend/config.yaml:ro
       - ${DEER_FLOW_EXTENSIONS_CONFIG_PATH}:/app/backend/extensions_config.json:ro
-      - ../skills:/app/skills:ro
+      - ../skills:/app/skills
       - ${DEER_FLOW_HOME}:/app/backend/.deer-flow
       # DooD: AioSandboxProvider starts sandbox containers via host Docker daemon
       - ${DEER_FLOW_DOCKER_SOCKET}:/var/run/docker.sock
@@ -120,7 +120,7 @@ services:
       - ${DEER_FLOW_CONFIG_PATH}:/app/config.yaml:ro
       - ${DEER_FLOW_EXTENSIONS_CONFIG_PATH}:/app/extensions_config.json:ro
       - ${DEER_FLOW_HOME}:/app/backend/.deer-flow
-      - ../skills:/app/skills:ro
+      - ../skills:/app/skills
       - ../backend/.langgraph_api:/app/backend/.langgraph_api
       # DooD: same as gateway
       - ${DEER_FLOW_DOCKER_SOCKET}:/var/run/docker.sock
