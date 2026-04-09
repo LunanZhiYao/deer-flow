@@ -12,7 +12,6 @@ import {
   XIcon,
   ZapIcon,
 } from "lucide-react";
-import { useSuggestionsConfig } from "@/core/api/use-suggestions-config";
 import { useSearchParams } from "next/navigation";
 import {
   useCallback,
@@ -56,7 +55,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { getBackendBaseURL } from "@/core/config";
+import { getBackendBaseURL, isSuggestionsEnabled } from "@/core/config";
 import { useI18n } from "@/core/i18n/hooks";
 import { useModels } from "@/core/models/hooks";
 import type { AgentThreadContext } from "@/core/threads";
@@ -153,6 +152,8 @@ export function InputBox({
   const [followupsLoading, setFollowupsLoading] = useState(false);
   const lastGeneratedForAiIdRef = useRef<string | null>(null);
   const wasStreamingRef = useRef(false);
+  // 建议开关
+  const enableSuggestions = useMemo(() => isSuggestionsEnabled(), []);
 
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingSuggestion, setPendingSuggestion] = useState<string | null>(
@@ -310,17 +311,7 @@ export function InputBox({
     setTimeout(() => requestFormSubmit(), 0);
   }, [pendingSuggestion, requestFormSubmit, textInput]);
 
-  const { config: suggestionsConfig } = useSuggestionsConfig();
-
   useEffect(() => {
-    // 如果建议功能未启用，直接返回
-    if (!suggestionsConfig.enabled) {
-      setFollowupsHidden(true);
-      setFollowupsLoading(false);
-      setFollowups([]);
-      return;
-    }
-
     const streaming = status === "streaming";
     const wasStreaming = wasStreamingRef.current;
     wasStreamingRef.current = streaming;
@@ -329,6 +320,10 @@ export function InputBox({
     }
 
     if (disabled || isMock) {
+      return;
+    }
+
+    if (!enableSuggestions) {
       return;
     }
 
@@ -363,7 +358,7 @@ export function InputBox({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         messages: recent,
-        n: suggestionsConfig.max_suggestions,
+        n: 3,
         model_name: context.model_name ?? undefined,
       }),
       signal: controller.signal,
@@ -378,7 +373,7 @@ export function InputBox({
         const suggestions = (data.suggestions ?? [])
           .map((s) => (typeof s === "string" ? s.trim() : ""))
           .filter((s) => s.length > 0)
-          .slice(0, suggestionsConfig.max_suggestions);
+          .slice(0, 5);
         setFollowups(suggestions);
       })
       .catch(() => {
@@ -389,13 +384,21 @@ export function InputBox({
       });
 
     return () => controller.abort();
-  }, [context.model_name, disabled, isMock, status, thread.messages, threadId, suggestionsConfig]);
+  }, [
+    context.model_name,
+    disabled,
+    enableSuggestions,
+    isMock,
+    status,
+    thread.messages,
+    threadId,
+  ]);
 
   return (
     <div ref={promptRootRef} className="relative">
       <PromptInput
         className={cn(
-          "bg-background/90 rounded-2xl border border-border/50 backdrop-blur-xl transition-all duration-300 ease-out shadow-lg *:data-[slot='input-group']:rounded-2xl",
+          "bg-background/90 border-border/50 rounded-2xl border shadow-lg backdrop-blur-xl transition-all duration-300 ease-out *:data-[slot='input-group']:rounded-2xl",
           className,
         )}
         disabled={disabled}
@@ -492,8 +495,7 @@ export function InputBox({
                           <ZapIcon
                             className={cn(
                               "mr-2 size-4",
-                              context.mode === "flash" &&
-                                "text-foreground",
+                              context.mode === "flash" && "text-foreground",
                             )}
                           />
                           {t.inputBox.flashMode}
@@ -552,8 +554,7 @@ export function InputBox({
                           <GraduationCapIcon
                             className={cn(
                               "mr-2 size-4",
-                              context.mode === "pro" &&
-                                "text-foreground",
+                              context.mode === "pro" && "text-foreground",
                             )}
                           />
                           {t.inputBox.proMode}
