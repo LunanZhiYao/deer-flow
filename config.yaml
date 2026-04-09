@@ -9,35 +9,15 @@ log_level: info
 # 模型配置
 # ============================================================================
 models:
-  - name: QianYi10_v1
-    display_name: QianYi10_v1
-    use: langchain_openai:ChatOpenAI
-    model: QianYi10
-    api_key: gpustack_80eb782fb6b9bc07_6cfb547880b04dfa06c31d13c56c91b3
-    base_url: http://10.0.23.50/v1
-    max_tokens: 8192
-    temperature: 0.7
-    supports_thinking: true  # 启用思考模式支持
-    stream: true
   - name: QianYi10
     display_name: QianYi10
     use: langchain_openai:ChatOpenAI
     model: QianYi10
     api_key: sk-7B8N9M0L1K2J3H4G5F6D7S8A9Q0W1E2R3T4Y5U6I7O8P9L0K1J2H3G4F5D
     base_url: http://10.0.20.132:8080/v1-openai
-    max_tokens: 8192
+    max_tokens: 4096
     temperature: 0.7
     supports_thinking: true  # 启用思考模式支持
-    stream: true
-  - name: doubao2.0
-    display_name: doubao-model2.0
-    use: langchain_anthropic:ChatAnthropic
-    model: doubao-seed-2-0-code-preview-260215
-    api_key: bf6a7ab6-56b9-48c8-8058-c4c2d4fe938d
-    base_url: https://ark.cn-beijing.volces.com/api/coding
-    max_tokens: 8192
-    stream: true
-    temperature: 0.7
 
 # ============================================================================
 # 工具组配置
@@ -53,17 +33,13 @@ tool_groups:
 # ============================================================================
 tools:
   # 网页搜索工具 (使用 DuckDuckGo，无需 API key)
-#  - name: web_search
-#    group: web
-#    use: deerflow.community.ddg_search.tools:web_search_tool
-#    max_results: 5
-    # 搜索区域: cn-zh (中文), wt-wt (全球), us-en (英文)
-#    region: cn-zh
   - name: web_search
     group: web
-    use: deerflow.community.aliyun_opensearch.tools:web_search_tool
-    top_k: 5
-    # api_key: OS-cog8m3g45btka94h  # 可选，默认已内置
+    use: deerflow.community.ddg_search.tools:web_search_tool
+    max_results: 5
+    # 搜索区域: cn-zh (中文), wt-wt (全球), us-en (英文)
+    region: cn-zh
+
   # 网页抓取工具 (使用 Jina AI reader)
   - name: web_fetch
     group: web
