@@ -19,6 +19,15 @@ export function getBackendBaseURL() {
   return "http://gateway:8001";
 }
 
+// 添加手动控制开关suggestion
+export function isSuggestionsEnabled(): boolean {
+  const value = env.NEXT_PUBLIC_ENABLE_SUGGESTIONS;
+  if (value === undefined || value === "") {
+    return false;
+  }
+  return value.toLowerCase() === "true" || value === "1";
+}
+
 export function getLangGraphBaseURL(isMock?: boolean) {
   if (env.NEXT_PUBLIC_LANGGRAPH_BASE_URL) {
     return new URL(
