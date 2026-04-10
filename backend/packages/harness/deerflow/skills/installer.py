@@ -118,6 +118,7 @@ def install_skill_from_archive(
     zip_path: str | Path,
     *,
     skills_root: Path | None = None,
+    user_id: str | None = None,
 ) -> dict:
     """Install a skill from a .skill archive (ZIP).
 
@@ -125,16 +126,17 @@ def install_skill_from_archive(
         zip_path: Path to the .skill file.
         skills_root: Override the skills root directory. If None, uses
             the default from config.
+        user_id: 用户ID，用于数据隔离。如果提供，技能将安装到 custom/{user_id}/ 目录下。
 
     Returns:
-        Dict with success, skill_name, message.
+        Dict with success, skill_name, message, user_id.
 
     Raises:
         FileNotFoundError: If the file does not exist.
         ValueError: If the file is invalid (wrong extension, bad ZIP,
             invalid frontmatter, duplicate name).
     """
-    logger.info("Installing skill from %s", zip_path)
+    logger.info("Installing skill from %s for user %s", zip_path, user_id)
     path = Path(zip_path)
     if not path.is_file():
         if not path.exists():
@@ -145,7 +147,14 @@ def install_skill_from_archive(
 
     if skills_root is None:
         skills_root = get_skills_root_path()
-    custom_dir = skills_root / "custom"
+    
+    # 根据 user_id 确定安装目录
+    if user_id:
+        # 用户专属目录：custom/{user_id}/
+        custom_dir = skills_root / "custom" / user_id
+    else:
+        # 兼容旧逻辑：直接安装到 custom/ 目录
+        custom_dir = skills_root / "custom"
     custom_dir.mkdir(parents=True, exist_ok=True)
 
     with tempfile.TemporaryDirectory() as tmp:
@@ -174,10 +183,11 @@ def install_skill_from_archive(
             raise SkillAlreadyExistsError(f"Skill '{skill_name}' already exists")
 
         shutil.copytree(skill_dir, target)
-        logger.info("Skill %r installed to %s", skill_name, target)
+        logger.info("Skill %r installed to %s for user %s", skill_name, target, user_id)
 
     return {
         "success": True,
         "skill_name": skill_name,
         "message": f"Skill '{skill_name}' installed successfully",
+        "user_id": user_id,
     }

@@ -389,13 +389,27 @@ def _get_memory_context(agent_name: str | None = None, user_id: str | None = Non
         return ""
 
 
-def get_skills_prompt_section(available_skills: set[str] | None = None) -> str:
+def get_skills_prompt_section(available_skills: set[str] | None = None, user_id: str | None = None) -> str:
     """Generate the skills prompt section with available skills list.
+
+    Args:
+        available_skills: Optional set of skill names to filter.
+        user_id: 用户ID，用于过滤自定义技能。如果提供，只返回该用户的自定义技能和所有公共技能。
 
     Returns the <skill_system>...</skill_system> block listing all enabled skills,
     suitable for injection into any agent's system prompt.
     """
-    skills = load_skills(enabled_only=True)
+    # 如果没有提供 user_id，尝试从 LangGraph 配置中获取
+    if user_id is None:
+        try:
+            from langgraph.config import get_config
+
+            config_data = get_config()
+            user_id = config_data.get("configurable", {}).get("user_id")
+        except Exception:
+            pass
+
+    skills = load_skills(enabled_only=True, user_id=user_id)
 
     try:
         from deerflow.config import get_app_config

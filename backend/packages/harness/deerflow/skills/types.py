@@ -14,6 +14,7 @@ class Skill:
     relative_path: Path  # Relative path from category root to skill directory
     category: str  # 'public' or 'custom'
     enabled: bool = False  # Whether this skill is enabled
+    user_id: str | None = None  # 用户ID，用于数据隔离，public技能为None
 
     @property
     def skill_path(self) -> str:

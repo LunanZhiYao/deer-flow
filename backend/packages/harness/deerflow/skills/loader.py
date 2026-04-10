@@ -22,7 +22,7 @@ def get_skills_root_path() -> Path:
     return skills_dir
 
 
-def load_skills(skills_path: Path | None = None, use_config: bool = True, enabled_only: bool = False) -> list[Skill]:
+def load_skills(skills_path: Path | None = None, use_config: bool = True, enabled_only: bool = False, user_id: str | None = None) -> list[Skill]:
     """
     Load all skills from the skills directory.
 
@@ -35,6 +35,7 @@ def load_skills(skills_path: Path | None = None, use_config: bool = True, enable
                      Otherwise defaults to deer-flow/skills
         use_config: Whether to load skills path from config (default: True)
         enabled_only: If True, only return enabled skills (default: False)
+        user_id: 用户ID，用于过滤自定义技能。如果提供，只返回该用户的自定义技能和所有公共技能
 
     Returns:
         List of Skill objects, sorted by name
@@ -72,7 +73,19 @@ def load_skills(skills_path: Path | None = None, use_config: bool = True, enable
             skill_file = Path(current_root) / "SKILL.md"
             relative_path = skill_file.parent.relative_to(category_path)
 
-            skill = parse_skill_file(skill_file, category=category, relative_path=relative_path)
+            # 从目录路径中提取 user_id（仅对 custom 技能）
+            skill_user_id = None
+            if category == "custom":
+                # relative_path 格式为 "user_id/skill_name" 或 "skill_name"
+                # 如果是旧格式（没有 user_id），则 skill_user_id 为 None
+                parts = relative_path.parts
+                if len(parts) >= 2:
+                    # 新格式：user_id/skill_name
+                    skill_user_id = parts[0]
+                    # 更新 relative_path 为技能名称部分
+                    relative_path = Path(*parts[1:])
+
+            skill = parse_skill_file(skill_file, category=category, relative_path=relative_path, user_id=skill_user_id)
             if skill:
                 skills.append(skill)
 
@@ -94,6 +107,12 @@ def load_skills(skills_path: Path | None = None, use_config: bool = True, enable
     # Filter by enabled status if requested
     if enabled_only:
         skills = [skill for skill in skills if skill.enabled]
+
+    # 根据 user_id 过滤技能
+    if user_id is not None:
+        # 返回：1. 所有公共技能（user_id 为 None）
+        #       2. 当前用户的自定义技能（user_id 匹配）
+        skills = [skill for skill in skills if skill.user_id is None or skill.user_id == user_id]
 
     # Sort by name for consistent ordering
     skills.sort(key=lambda s: s.name)

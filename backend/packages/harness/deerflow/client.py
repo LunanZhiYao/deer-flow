@@ -484,6 +484,7 @@ class DeerFlowClient:
         """
         from deerflow.skills.loader import load_skills
 
+        user_id = self._get_current_user_id()
         return {
             "skills": [
                 {
@@ -492,8 +493,9 @@ class DeerFlowClient:
                     "license": s.license,
                     "category": s.category,
                     "enabled": s.enabled,
+                    "user_id": s.user_id,
                 }
-                for s in load_skills(enabled_only=enabled_only)
+                for s in load_skills(enabled_only=enabled_only, user_id=user_id)
             ]
         }
 
@@ -606,7 +608,8 @@ class DeerFlowClient:
         """
         from deerflow.skills.loader import load_skills
 
-        skill = next((s for s in load_skills(enabled_only=False) if s.name == name), None)
+        user_id = self._get_current_user_id()
+        skill = next((s for s in load_skills(enabled_only=False, user_id=user_id) if s.name == name), None)
         if skill is None:
             return None
         return {
@@ -615,6 +618,7 @@ class DeerFlowClient:
             "license": skill.license,
             "category": skill.category,
             "enabled": skill.enabled,
+            "user_id": skill.user_id,
         }
 
     def update_skill(self, name: str, *, enabled: bool) -> dict:
@@ -633,7 +637,8 @@ class DeerFlowClient:
         """
         from deerflow.skills.loader import load_skills
 
-        skills = load_skills(enabled_only=False)
+        user_id = self._get_current_user_id()
+        skills = load_skills(enabled_only=False, user_id=user_id)
         skill = next((s for s in skills if s.name == name), None)
         if skill is None:
             raise ValueError(f"Skill '{name}' not found")
@@ -656,7 +661,7 @@ class DeerFlowClient:
         self._agent_config_key = None
         reload_extensions_config()
 
-        updated = next((s for s in load_skills(enabled_only=False) if s.name == name), None)
+        updated = next((s for s in load_skills(enabled_only=False, user_id=user_id) if s.name == name), None)
         if updated is None:
             raise RuntimeError(f"Skill '{name}' disappeared after update")
         return {
@@ -665,6 +670,7 @@ class DeerFlowClient:
             "license": updated.license,
             "category": updated.category,
             "enabled": updated.enabled,
+            "user_id": updated.user_id,
         }
 
     def install_skill(self, skill_path: str | Path) -> dict:
@@ -674,13 +680,14 @@ class DeerFlowClient:
             skill_path: Path to the .skill file.
 
         Returns:
-            Dict with success, skill_name, message.
+            Dict with success, skill_name, message, user_id.
 
         Raises:
             FileNotFoundError: If the file does not exist.
             ValueError: If the file is invalid.
         """
-        return install_skill_from_archive(skill_path)
+        user_id = self._get_current_user_id()
+        return install_skill_from_archive(skill_path, user_id=user_id)
 
     # ------------------------------------------------------------------
     # Public API — memory management

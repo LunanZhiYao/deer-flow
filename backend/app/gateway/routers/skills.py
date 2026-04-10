@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from app.gateway.path_utils import resolve_thread_virtual_path
+from app.services.user_session import get_current_user_id
 from deerflow.config.extensions_config import ExtensionsConfig, SkillStateConfig, get_extensions_config, reload_extensions_config
 from deerflow.skills import Skill, load_skills
 from deerflow.skills.installer import SkillAlreadyExistsError, install_skill_from_archive
@@ -23,6 +24,7 @@ class SkillResponse(BaseModel):
     license: str | None = Field(None, description="License information")
     category: str = Field(..., description="Category of the skill (public or custom)")
     enabled: bool = Field(default=True, description="Whether this skill is enabled")
+    user_id: str | None = Field(None, description="用户ID，仅自定义技能有此字段")
 
 
 class SkillsListResponse(BaseModel):
@@ -50,6 +52,7 @@ class SkillInstallResponse(BaseModel):
     success: bool = Field(..., description="Whether the installation was successful")
     skill_name: str = Field(..., description="Name of the installed skill")
     message: str = Field(..., description="Installation result message")
+    user_id: str | None = Field(None, description="用户ID，技能安装所属的用户")
 
 
 def _skill_to_response(skill: Skill) -> SkillResponse:
@@ -60,6 +63,7 @@ def _skill_to_response(skill: Skill) -> SkillResponse:
         license=skill.license,
         category=skill.category,
         enabled=skill.enabled,
+        user_id=skill.user_id,
     )
 
 
@@ -67,11 +71,13 @@ def _skill_to_response(skill: Skill) -> SkillResponse:
     "/skills",
     response_model=SkillsListResponse,
     summary="List All Skills",
-    description="Retrieve a list of all available skills from both public and custom directories.",
+    description="Retrieve a list of all available skills from both public and custom directories. Custom skills are filtered by user ID.",
 )
 async def list_skills() -> SkillsListResponse:
     try:
-        skills = load_skills(enabled_only=False)
+        # 获取当前用户ID，用于过滤自定义技能
+        user_id = get_current_user_id()
+        skills = load_skills(enabled_only=False, user_id=user_id)
         return SkillsListResponse(skills=[_skill_to_response(skill) for skill in skills])
     except Exception as e:
         logger.error(f"Failed to load skills: {e}", exc_info=True)
@@ -86,7 +92,9 @@ async def list_skills() -> SkillsListResponse:
 )
 async def get_skill(skill_name: str) -> SkillResponse:
     try:
-        skills = load_skills(enabled_only=False)
+        # 获取当前用户ID，用于过滤自定义技能
+        user_id = get_current_user_id()
+        skills = load_skills(enabled_only=False, user_id=user_id)
         skill = next((s for s in skills if s.name == skill_name), None)
 
         if skill is None:
@@ -108,7 +116,9 @@ async def get_skill(skill_name: str) -> SkillResponse:
 )
 async def update_skill(skill_name: str, request: SkillUpdateRequest) -> SkillResponse:
     try:
-        skills = load_skills(enabled_only=False)
+        # 获取当前用户ID，用于过滤自定义技能
+        user_id = get_current_user_id()
+        skills = load_skills(enabled_only=False, user_id=user_id)
         skill = next((s for s in skills if s.name == skill_name), None)
 
         if skill is None:
@@ -133,7 +143,7 @@ async def update_skill(skill_name: str, request: SkillUpdateRequest) -> SkillRes
         logger.info(f"Skills configuration updated and saved to: {config_path}")
         reload_extensions_config()
 
-        skills = load_skills(enabled_only=False)
+        skills = load_skills(enabled_only=False, user_id=user_id)
         updated_skill = next((s for s in skills if s.name == skill_name), None)
 
         if updated_skill is None:
@@ -153,12 +163,17 @@ async def update_skill(skill_name: str, request: SkillUpdateRequest) -> SkillRes
     "/skills/install",
     response_model=SkillInstallResponse,
     summary="Install Skill",
-    description="Install a skill from a .skill file (ZIP archive) located in the thread's user-data directory.",
+    description="Install a skill from a .skill file (ZIP archive) located in the thread's user-data directory. The skill will be installed to the current user's custom directory.",
 )
 async def install_skill(request: SkillInstallRequest) -> SkillInstallResponse:
     try:
+        # 获取当前用户ID，用于数据隔离
+        user_id = get_current_user_id()
+        if not user_id:
+            raise HTTPException(status_code=401, detail="用户未认证，无法安装技能")
+        
         skill_file_path = resolve_thread_virtual_path(request.thread_id, request.path)
-        result = install_skill_from_archive(skill_file_path)
+        result = install_skill_from_archive(skill_file_path, user_id=user_id)
         return SkillInstallResponse(**result)
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))

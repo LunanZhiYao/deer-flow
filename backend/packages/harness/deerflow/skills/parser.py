@@ -7,13 +7,15 @@ from .types import Skill
 logger = logging.getLogger(__name__)
 
 
-def parse_skill_file(skill_file: Path, category: str, relative_path: Path | None = None) -> Skill | None:
+def parse_skill_file(skill_file: Path, category: str, relative_path: Path | None = None, user_id: str | None = None) -> Skill | None:
     """
     Parse a SKILL.md file and extract metadata.
 
     Args:
         skill_file: Path to the SKILL.md file
         category: Category of the skill ('public' or 'custom')
+        relative_path: Relative path from category root to skill directory
+        user_id: 用户ID，用于数据隔离，public技能为None
 
     Returns:
         Skill object if parsing succeeds, None otherwise
@@ -61,6 +63,7 @@ def parse_skill_file(skill_file: Path, category: str, relative_path: Path | None
             relative_path=relative_path or Path(skill_file.parent.name),
             category=category,
             enabled=True,  # Default to enabled, actual state comes from config file
+            user_id=user_id,
         )
 
     except Exception as e:
