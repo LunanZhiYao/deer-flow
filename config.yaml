@@ -140,11 +140,11 @@ summarization:
   enabled: true
   model_name: null
   trigger:
-    - type: fraction
-      value: 0.7
+    - type: tokens
+      value: 15564
   keep:
-    type: fraction
-    value: 0.3
+    type: messages
+    value: 10
   trim_tokens_to_summarize: 15564
   summary_prompt: |
     请用中文总结以下对话历史，提取最重要的上下文信息。
