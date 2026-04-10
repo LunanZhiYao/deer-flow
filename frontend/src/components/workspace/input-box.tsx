@@ -95,7 +95,9 @@ function getResolvedMode(
   if (mode) {
     return mode;
   }
-  return supportsThinking ? "pro" : "flash";
+  // return supportsThinking ? "pro" : "flash";
+  // 优先默认闪速
+  return "flash";
 }
 
 export function InputBox({
