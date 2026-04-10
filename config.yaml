@@ -55,9 +55,13 @@ tools:
   # 网页搜索工具 (使用 DuckDuckGo，无需 API key)
   - name: web_search
     group: web
-    use: deerflow.community.tavily.tools:web_search_tool
-    max_results: 5
-    api_key: $TAVILY_API_KEY  # Set if needed
+    use: deerflow.community.aliyun_opensearch.tools:web_search_tool
+    top_k: 5
+#  - name: web_search
+#    group: web
+#    use: deerflow.community.tavily.tools:web_search_tool
+#    max_results: 5
+#    api_key: $TAVILY_API_KEY  # Set if needed
 
   # 网页搜索工具 (使用 DuckDuckGo，无需 API key)
 #  - name: web_search
