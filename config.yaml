@@ -28,6 +28,7 @@ models:
     max_tokens: 131000
     temperature: 0.7
     supports_thinking: true  # 启用思考模式支持
+    supports_vision: true    # 启用视觉/图片输入支持
     stream: true
 #  - name: doubao2.0
 #    display_name: doubao-model2.0
