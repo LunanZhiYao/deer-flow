@@ -78,15 +78,19 @@ function SkillSettingsList({
             </TabsList>
           </Tabs>
         </div>
-        <div>
-          <Button size="sm" onClick={handleCreateSkill}>
-            <SparklesIcon className="size-4" />
-            {t.settings.skills.createSkill}
-          </Button>
-        </div>
+        {filter === "custom" && (
+          <div>
+            <Button size="sm" onClick={handleCreateSkill}>
+              <SparklesIcon className="size-4" />
+              {t.settings.skills.createSkill}
+            </Button>
+          </div>
+        )}
       </header>
       {filteredSkills.length === 0 && (
-        <EmptySkill onCreateSkill={handleCreateSkill} />
+        <EmptySkill
+          onCreateSkill={filter === "custom" ? handleCreateSkill : undefined}
+        />
       )}
       {filteredSkills.length > 0 &&
         filteredSkills.map((skill) => (
@@ -99,22 +103,24 @@ function SkillSettingsList({
                 {skill.description}
               </ItemDescription>
             </ItemContent>
-            <ItemActions>
-              <Switch
-                checked={skill.enabled}
-                disabled={env.NEXT_PUBLIC_STATIC_WEBSITE_ONLY === "true"}
-                onCheckedChange={(checked) =>
-                  enableSkill({ skillName: skill.name, enabled: checked })
-                }
-              />
-            </ItemActions>
+            {filter === "custom" && (
+              <ItemActions>
+                <Switch
+                  checked={skill.enabled}
+                  disabled={env.NEXT_PUBLIC_STATIC_WEBSITE_ONLY === "true"}
+                  onCheckedChange={(checked) =>
+                    enableSkill({ skillName: skill.name, enabled: checked })
+                  }
+                />
+              </ItemActions>
+            )}
           </Item>
         ))}
     </div>
   );
 }
 
-function EmptySkill({ onCreateSkill }: { onCreateSkill: () => void }) {
+function EmptySkill({ onCreateSkill }: { onCreateSkill?: () => void }) {
   const { t } = useI18n();
   return (
     <Empty>
@@ -127,9 +133,11 @@ function EmptySkill({ onCreateSkill }: { onCreateSkill: () => void }) {
           {t.settings.skills.emptyDescription}
         </EmptyDescription>
       </EmptyHeader>
-      <EmptyContent>
-        <Button onClick={onCreateSkill}>{t.settings.skills.emptyButton}</Button>
-      </EmptyContent>
+      {onCreateSkill && (
+        <EmptyContent>
+          <Button onClick={onCreateSkill}>{t.settings.skills.emptyButton}</Button>
+        </EmptyContent>
+      )}
     </Empty>
   );
 }
