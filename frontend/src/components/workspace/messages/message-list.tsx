@@ -33,17 +33,29 @@ export function MessageList({
   className,
   threadId,
   thread,
+  streamHintStage,
   paddingBottom = 160,
 }: {
   className?: string;
   threadId: string;
   thread: BaseStream<AgentThreadState>;
+  streamHintStage?:
+    | "idle"
+    | "preparing"
+    | "uploading"
+    | "calling_api"
+    | "thinking"
+    | "streaming"
+    | "writing"
+    | "searching";
   paddingBottom?: number;
 }) {
   const { t } = useI18n();
   const rehypePlugins = useRehypeSplitWordsIntoSpans(thread.isLoading);
   const updateSubtask = useUpdateSubtask();
   const messages = thread.messages;
+  const lastMessage = messages.at(-1);
+  const activitySignal = `${messages.length}:${lastMessage?.id ?? "none"}:${lastMessage ? extractTextFromMessage(lastMessage).length : 0}`;
   if (thread.isThreadLoading && messages.length === 0) {
     return <MessageListSkeleton />;
   }
@@ -198,7 +210,16 @@ export function MessageList({
             />
           );
         })}
-        {thread.isLoading && <StreamingIndicator className="my-4" />}
+        {thread.isLoading && (
+          <StreamingIndicator
+            className="my-4"
+            activitySignal={activitySignal}
+            stage={streamHintStage}
+            // TODO: 如需按页面覆盖默认时间，可在这里传：
+            // idleThresholdMs={4000}
+            // rotateHintEveryMs={3000}
+          />
+        )}
         <div style={{ height: `${paddingBottom}px` }} />
       </ConversationContent>
     </Conversation>

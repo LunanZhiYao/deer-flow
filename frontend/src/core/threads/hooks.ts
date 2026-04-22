@@ -23,6 +23,16 @@ export type ToolEndEvent = {
   data: unknown;
 };
 
+export type StreamHintStage =
+  | "idle"
+  | "preparing"
+  | "uploading"
+  | "calling_api"
+  | "thinking"
+  | "streaming"
+  | "writing"
+  | "searching";
+
 export type ThreadStreamOptions = {
   threadId?: string | null | undefined;
   context: LocalSettings["context"];
@@ -31,6 +41,105 @@ export type ThreadStreamOptions = {
   onFinish?: (state: AgentThreadState) => void;
   onToolEnd?: (event: ToolEndEvent) => void;
 };
+
+type MessagePerfTrace = {
+  traceId: string;
+  clickAt: number;
+  streamStartAt?: number;
+  llmStartAt?: number;
+  llmEndAt?: number;
+};
+
+declare global {
+  interface Window {
+    openLog?: () => void;
+    closeLog?: () => void;
+  }
+}
+
+let timelineLogEnabled = false;
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return typeof value === "object" && value !== null
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function getEventRunId(event: { run_id?: unknown; runId?: unknown }): string {
+  if (typeof event.run_id === "string" && event.run_id.length > 0) {
+    return event.run_id;
+  }
+  if (typeof event.runId === "string" && event.runId.length > 0) {
+    return event.runId;
+  }
+  return "";
+}
+
+function isFileWriteToolEvent(toolName: string, data: unknown): boolean {
+  if (toolName === "write_file" || toolName === "str_replace") {
+    return true;
+  }
+  if (toolName !== "bash") {
+    return false;
+  }
+  const command =
+    asRecord(data)?.input && asRecord(asRecord(data)?.input)?.command;
+  if (typeof command !== "string") {
+    return false;
+  }
+  return /(touch\s+|>>|[^>]>\s*|tee\s+|cat\s+<<|echo\s+.+>)/.test(command);
+}
+
+function formatZhTime(timestamp: number): string {
+  const date = new Date(timestamp);
+  return `${date.toLocaleString("zh-CN", { hour12: false })}.${String(date.getMilliseconds()).padStart(3, "0")}`;
+}
+
+function isTimelineLogEnabled(): boolean {
+  return timelineLogEnabled;
+}
+
+function ensureTimelineLogToggleMethods() {
+  if (typeof window === "undefined") {
+    return;
+  }
+  if (typeof window.openLog !== "function") {
+    window.openLog = () => {
+      timelineLogEnabled = true;
+      console.info("[消息链路日志] 已开启");
+    };
+  }
+  if (typeof window.closeLog !== "function") {
+    window.closeLog = () => {
+      timelineLogEnabled = false;
+      console.info("[消息链路日志] 已关闭");
+    };
+  }
+}
+
+function logTimeline(message: string, meta?: Record<string, unknown>) {
+  // TODO: 临时链路日志（排查发送/流式/工具耗时），稳定后可删除。
+  ensureTimelineLogToggleMethods();
+  if (!isTimelineLogEnabled()) {
+    return;
+  }
+  if (meta) {
+    console.log(`[消息链路日志] ${message}`, meta);
+    return;
+  }
+  console.log(`[消息链路日志] ${message}`);
+}
+
+function clearAllToolProgressTimers(
+  timers: Map<string, number>,
+  starts: Map<string, number>,
+) {
+  for (const timerId of timers.values()) {
+    window.clearInterval(timerId);
+  }
+  timers.clear();
+  starts.clear();
+}
 
 function getStreamErrorMessage(error: unknown): string {
   if (typeof error === "string" && error.trim()) {
@@ -72,6 +181,10 @@ export function useThreadStream({
   // and to allow access to the current thread id in onUpdateEvent
   const threadIdRef = useRef<string | null>(threadId ?? null);
   const startedRef = useRef(false);
+  const perfTraceRef = useRef<MessagePerfTrace | null>(null);
+  const toolStartAtRef = useRef<Map<string, number>>(new Map());
+  const toolProgressTimerRef = useRef<Map<string, number>>(new Map());
+  const [streamHintStage, setStreamHintStage] = useState<StreamHintStage>("idle");
 
   const listeners = useRef({
     onStart,
@@ -94,10 +207,23 @@ export function useThreadStream({
     threadIdRef.current = normalizedThreadId;
   }, [threadId]);
 
+  useEffect(() => {
+    ensureTimelineLogToggleMethods();
+  }, []);
+
   const _handleOnStart = useCallback((id: string) => {
     if (!startedRef.current) {
       listeners.current.onStart?.(id);
       startedRef.current = true;
+      const trace = perfTraceRef.current;
+      if (trace && !trace.streamStartAt) {
+        trace.streamStartAt = Date.now();
+        setStreamHintStage("streaming");
+        logTimeline("流式输出开始", {
+          追踪ID: trace.traceId,
+          时间: formatZhTime(trace.streamStartAt),
+        });
+      }
     }
   }, []);
 
@@ -123,7 +249,80 @@ export function useThreadStream({
       setOnStreamThreadId(meta.thread_id);
     },
     onLangChainEvent(event) {
+      // TODO: 临时链路日志相关事件处理（模型开始/结束、文件写入进度），后续可整体移除。
+      // logTimeline("收到LangChain事件", {
+      //   事件名: event.event,
+      //   节点名: event.name,
+      // });
+      const trace = perfTraceRef.current;
+      if (event.event === "on_chat_model_start") {
+        if (trace) {
+          trace.llmStartAt = Date.now();
+          setStreamHintStage("thinking");
+          logTimeline("大模型调用开始", {
+            追踪ID: trace.traceId,
+            时间: formatZhTime(trace.llmStartAt),
+          });
+        }
+      }
+      if (event.event === "on_chat_model_stream" && trace && !trace.streamStartAt) {
+        trace.streamStartAt = Date.now();
+        setStreamHintStage("streaming");
+        logTimeline("流式输出开始", {
+          追踪ID: trace.traceId,
+          时间: formatZhTime(trace.streamStartAt),
+        });
+      }
+      if (event.event === "on_chat_model_end") {
+        if (trace) {
+          trace.llmEndAt = Date.now();
+          const llmDuration = trace.llmStartAt
+            ? trace.llmEndAt - trace.llmStartAt
+            : undefined;
+          logTimeline("大模型调用结束", {
+            追踪ID: trace.traceId,
+            时间: formatZhTime(trace.llmEndAt),
+            ...(llmDuration !== undefined
+              ? { 大模型调用耗时毫秒: llmDuration }
+              : {}),
+          });
+        }
+      }
+      if (event.event === "on_tool_start") {
+        const runId = getEventRunId(event);
+        const startAt = Date.now();
+        if (runId) {
+          toolStartAtRef.current.set(runId, startAt);
+        }
+        if (isFileWriteToolEvent(event.name, event.data)) {
+          setStreamHintStage("writing");
+          logTimeline("文件创建/写入开始", {
+            追踪ID: trace?.traceId,
+            工具: event.name,
+            时间: formatZhTime(startAt),
+          });
+        } else {
+          setStreamHintStage("searching");
+        }
+      }
       if (event.event === "on_tool_end") {
+        const runId = getEventRunId(event);
+        const startAt = runId ? toolStartAtRef.current.get(runId) : undefined;
+        if (runId) {
+          toolStartAtRef.current.delete(runId);
+        }
+        if (isFileWriteToolEvent(event.name, event.data)) {
+          const endAt = Date.now();
+          logTimeline("文件创建/写入完成", {
+            追踪ID: trace?.traceId,
+            工具: event.name,
+            时间: formatZhTime(endAt),
+            ...(startAt ? { 文件操作耗时毫秒: endAt - startAt } : {}),
+          });
+        }
+        if (trace) {
+          setStreamHintStage("thinking");
+        }
         listeners.current.onToolEnd?.({
           name: event.name,
           data: event.data,
@@ -175,10 +374,56 @@ export function useThreadStream({
       }
     },
     onError(error) {
+      setStreamHintStage("idle");
+      clearAllToolProgressTimers(
+        toolProgressTimerRef.current,
+        toolStartAtRef.current,
+      );
+      const trace = perfTraceRef.current;
+      if (trace) {
+        const endAt = Date.now();
+        logTimeline("本次消息流程异常结束", {
+          追踪ID: trace.traceId,
+          时间: formatZhTime(endAt),
+          总耗时毫秒: endAt - trace.clickAt,
+          错误:
+            error instanceof Error
+              ? error.message
+              : typeof error === "string"
+                ? error
+                : "未知错误",
+        });
+        perfTraceRef.current = null;
+      }
       setOptimisticMessages([]);
       toast.error(getStreamErrorMessage(error));
     },
     onFinish(state) {
+      setStreamHintStage("idle");
+      clearAllToolProgressTimers(
+        toolProgressTimerRef.current,
+        toolStartAtRef.current,
+      );
+      const trace = perfTraceRef.current;
+      const endAt = Date.now();
+      if (trace) {
+        const totalDuration = endAt - trace.clickAt;
+        const streamDuration = trace.streamStartAt
+          ? endAt - trace.streamStartAt
+          : undefined;
+        logTimeline("流式输出结束", {
+          追踪ID: trace.traceId,
+          时间: formatZhTime(endAt),
+          ...(streamDuration !== undefined
+            ? { 流式输出耗时毫秒: streamDuration }
+            : {}),
+        });
+        logTimeline("本次消息处理完成", {
+          追踪ID: trace.traceId,
+          总耗时毫秒: totalDuration,
+        });
+        perfTraceRef.current = null;
+      }
       listeners.current.onFinish?.(state.values);
       void queryClient.invalidateQueries({ queryKey: ["threads", "search"] });
     },
@@ -211,6 +456,14 @@ export function useThreadStream({
         return;
       }
       sendInFlightRef.current = true;
+      const clickAt = Date.now();
+      const traceId = `${clickAt}-${Math.random().toString(36).slice(2, 8)}`;
+      clearAllToolProgressTimers(
+        toolProgressTimerRef.current,
+        toolStartAtRef.current,
+      );
+      perfTraceRef.current = { traceId, clickAt };
+      setStreamHintStage("preparing");
 
       const text = message.text.trim();
 
@@ -250,10 +503,31 @@ export function useThreadStream({
       _handleOnStart(threadId);
 
       let uploadedFileInfo: UploadedFileInfo[] = [];
+      const callApiWithTimer = async <T>(
+        apiName: string,
+        apiCall: () => Promise<T>,
+      ): Promise<T> => {
+        const startAt = Date.now();
+        const trace = perfTraceRef.current;
+        try {
+          const result = await apiCall();
+          return result;
+        } catch (error) {
+          const endAt = Date.now();
+          logTimeline(`接口调用失败：${apiName}`, {
+            追踪ID: trace?.traceId,
+            时间: formatZhTime(endAt),
+            接口耗时毫秒: endAt - startAt,
+            错误: error instanceof Error ? error.message : String(error),
+          });
+          throw error;
+        }
+      };
 
       try {
         // Upload files first if any
         if (message.files && message.files.length > 0) {
+          setStreamHintStage("uploading");
           setIsUploading(true);
           try {
             // Convert FileUIPart to File objects by fetching blob URLs
@@ -261,7 +535,10 @@ export function useThreadStream({
               if (fileUIPart.url && fileUIPart.filename) {
                 try {
                   // Fetch the blob URL to get the file data
-                  const response = await fetch(fileUIPart.url);
+                  const response = await callApiWithTimer(
+                    `读取本地文件数据(${fileUIPart.filename})`,
+                    () => fetch(fileUIPart.url),
+                  );
                   const blob = await response.blob();
 
                   // Create a File object from the blob
@@ -296,7 +573,10 @@ export function useThreadStream({
             }
 
             if (files.length > 0) {
-              const uploadResponse = await uploadFiles(threadId, files);
+              const uploadResponse = await callApiWithTimer(
+                "上传附件接口",
+                () => uploadFiles(threadId, files),
+              );
               uploadedFileInfo = uploadResponse.files;
 
               // Update optimistic human message with uploaded status + paths
@@ -346,47 +626,50 @@ export function useThreadStream({
           }),
         );
 
-        await thread.submit(
-          {
-            messages: [
-              {
-                type: "human",
-                content: [
-                  {
-                    type: "text",
-                    text,
-                  },
-                ],
-                additional_kwargs:
-                  filesForSubmit.length > 0 ? { files: filesForSubmit } : {},
-              },
-            ],
-          },
-          {
-            threadId: threadId,
-            streamSubgraphs: true,
-            streamResumable: true,
-            config: {
-              recursion_limit: 1000,
+        setStreamHintStage("calling_api");
+        const submitPayload: Parameters<typeof thread.submit>[0] = {
+          messages: [
+            {
+              type: "human",
+              content: [
+                {
+                  type: "text",
+                  text,
+                },
+              ],
+              additional_kwargs:
+                filesForSubmit.length > 0 ? { files: filesForSubmit } : {},
             },
-            context: {
-              ...extraContext,
-              ...context,
-              thinking_enabled: context.mode !== "flash",
-              is_plan_mode: context.mode === "pro" || context.mode === "ultra",
-              subagent_enabled: context.mode === "ultra",
-              reasoning_effort:
-                context.reasoning_effort ??
-                (context.mode === "ultra"
-                  ? "high"
-                  : context.mode === "pro"
-                    ? "medium"
-                    : context.mode === "thinking"
-                      ? "low"
-                      : undefined),
-              thread_id: threadId,
-            },
+          ],
+        };
+        const submitOptions: Parameters<typeof thread.submit>[1] = {
+          threadId: threadId,
+          streamMode: ["values", "messages-tuple", "events", "custom"],
+          streamSubgraphs: true,
+          streamResumable: true,
+          config: {
+            recursion_limit: 1000,
           },
+          context: {
+            ...extraContext,
+            ...context,
+            thinking_enabled: context.mode !== "flash",
+            is_plan_mode: context.mode === "pro" || context.mode === "ultra",
+            subagent_enabled: context.mode === "ultra",
+            reasoning_effort:
+              context.reasoning_effort ??
+              (context.mode === "ultra"
+                ? "high"
+                : context.mode === "pro"
+                  ? "medium"
+                  : context.mode === "thinking"
+                    ? "low"
+                    : undefined),
+            thread_id: threadId,
+          },
+        };
+        await callApiWithTimer("提交消息并开启流式接口", () =>
+          thread.submit(submitPayload, submitOptions),
         );
         void queryClient.invalidateQueries({ queryKey: ["threads", "search"] });
       } catch (error) {
@@ -409,7 +692,7 @@ export function useThreadStream({
         } as typeof thread)
       : thread;
 
-  return [mergedThread, sendMessage, isUploading] as const;
+  return [mergedThread, sendMessage, isUploading, streamHintStage] as const;
 }
 
 export function useThreads(
