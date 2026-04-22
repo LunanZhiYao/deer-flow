@@ -114,6 +114,14 @@ sandbox:
   image: enterprise-public-cn-beijing.cr.volces.com/vefaas-public/all-in-one-sandbox:latest
   # replicas: 3                    # 最大并发容器数，默认3
   # idle_timeout: 600              # 空闲超时(秒)，默认600
+  # 挂载 officecli 到 sandbox 容器
+  mounts:
+    - host_path: /root/.local/bin/officecli
+      container_path: /usr/local/bin/officecli
+      read_only: true
+  # .NET 全球化不变模式，避免 ICU 依赖
+  environment:
+    DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: "1"
 
 # ============================================================================
 # Skills 配置
