@@ -23,13 +23,17 @@ models:
     display_name: QianYi10
     use: langchain_openai:ChatOpenAI
     model: QianYi10
-    api_key: sk-7B8N9M0L1K2J3H4G5F6D7S8A9Q0W1E2R3T4Y5U6I7O8P9L0K1J2H3G4F5D
+    api_key: sk-9KM6zYXHJkT5bGCPb6P24RDZyJ3yp6aprfbFYnnm52YrYQMr8hWhmPQ8tmFMdSx9
     base_url: http://10.0.20.132:8080/v1-openai
-    max_tokens: 131000
+    max_tokens: 16384
     temperature: 0.7
     supports_thinking: true  # 启用思考模式支持
     supports_vision: true    # 启用视觉/图片输入支持
     stream: true
+    when_thinking_enabled:
+      extra_body:
+        thinking:
+          type: enabled
 #  - name: doubao2.0
 #    display_name: doubao-model2.0
 #    use: langchain_anthropic:ChatAnthropic
@@ -154,11 +158,11 @@ summarization:
   model_name: null
   trigger:
     - type: tokens
-      value: 15564
+      value: 155640
   keep:
     type: messages
     value: 10
-  trim_tokens_to_summarize: 15564
+  trim_tokens_to_summarize: 155640
   summary_prompt: |
     请用中文总结以下对话历史，提取最重要的上下文信息。
     要求：

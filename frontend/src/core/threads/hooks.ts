@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import type { PromptInputMessage } from "@/components/ai-elements/prompt-input";
 
 import { useUserAwareAPIClient } from "../api/user-aware-client";
+import { useUserId } from "../auth";
 import { getBackendBaseURL } from "../config";
 import { useI18n } from "../i18n/hooks";
 import type { FileInMessage } from "../messages/utils";
@@ -45,6 +46,9 @@ export type ThreadStreamOptions = {
 type MessagePerfTrace = {
   traceId: string;
   clickAt: number;
+  submitStartAt?: number;
+  firstEventAt?: number;
+  firstTokenAt?: number;
   streamStartAt?: number;
   llmStartAt?: number;
   llmEndAt?: number;
@@ -164,6 +168,7 @@ function getStreamErrorMessage(error: unknown): string {
   return "Request failed.";
 }
 
+
 export function useThreadStream({
   threadId,
   context,
@@ -173,6 +178,7 @@ export function useThreadStream({
   onToolEnd,
 }: ThreadStreamOptions) {
   const { t } = useI18n();
+  const userId = useUserId();
   // 使用用户感知的API客户端，确保用户数据隔离
   const apiClient = useUserAwareAPIClient(isMock);
   // Track the thread ID that is currently streaming to handle thread changes during streaming
@@ -215,15 +221,6 @@ export function useThreadStream({
     if (!startedRef.current) {
       listeners.current.onStart?.(id);
       startedRef.current = true;
-      const trace = perfTraceRef.current;
-      if (trace && !trace.streamStartAt) {
-        trace.streamStartAt = Date.now();
-        setStreamHintStage("streaming");
-        logTimeline("流式输出开始", {
-          追踪ID: trace.traceId,
-          时间: formatZhTime(trace.streamStartAt),
-        });
-      }
     }
   }, []);
 
@@ -242,7 +239,8 @@ export function useThreadStream({
     client: apiClient,
     assistantId: "lead_agent",
     threadId: onStreamThreadId,
-    reconnectOnMount: true,
+    // Avoid silently re-attaching stale interrupted runs on remount.
+    reconnectOnMount: false,
     fetchStateHistory: { limit: 1 },
     onCreated(meta) {
       handleStreamStart(meta.thread_id);
@@ -255,6 +253,17 @@ export function useThreadStream({
       //   节点名: event.name,
       // });
       const trace = perfTraceRef.current;
+      if (trace && !trace.firstEventAt) {
+        trace.firstEventAt = Date.now();
+        logTimeline("收到首个LangChain事件", {
+          追踪ID: trace.traceId,
+          时间: formatZhTime(trace.firstEventAt),
+          首事件等待毫秒:
+            trace.submitStartAt !== undefined
+              ? trace.firstEventAt - trace.submitStartAt
+              : undefined,
+        });
+      }
       if (event.event === "on_chat_model_start") {
         if (trace) {
           trace.llmStartAt = Date.now();
@@ -262,15 +271,24 @@ export function useThreadStream({
           logTimeline("大模型调用开始", {
             追踪ID: trace.traceId,
             时间: formatZhTime(trace.llmStartAt),
+            请求到模型开始毫秒:
+              trace.submitStartAt !== undefined
+                ? trace.llmStartAt - trace.submitStartAt
+                : undefined,
           });
         }
       }
       if (event.event === "on_chat_model_stream" && trace && !trace.streamStartAt) {
         trace.streamStartAt = Date.now();
+        trace.firstTokenAt = trace.streamStartAt;
         setStreamHintStage("streaming");
         logTimeline("流式输出开始", {
           追踪ID: trace.traceId,
           时间: formatZhTime(trace.streamStartAt),
+          模型开始到首Token毫秒:
+            trace.llmStartAt !== undefined
+              ? trace.streamStartAt - trace.llmStartAt
+              : undefined,
         });
       }
       if (event.event === "on_chat_model_end") {
@@ -627,6 +645,18 @@ export function useThreadStream({
         );
 
         setStreamHintStage("calling_api");
+        const thinkingEnabled = context.mode !== "flash";
+        const isPlanMode = context.mode === "pro" || context.mode === "ultra";
+        const subagentEnabled = context.mode === "ultra";
+        const reasoningEffort =
+          context.reasoning_effort ??
+          (context.mode === "ultra"
+            ? "high"
+            : context.mode === "pro"
+              ? "medium"
+              : context.mode === "thinking"
+                ? "low"
+                : undefined);
         const submitPayload: Parameters<typeof thread.submit>[0] = {
           messages: [
             {
@@ -646,28 +676,36 @@ export function useThreadStream({
           threadId: threadId,
           streamMode: ["values", "messages-tuple", "events", "custom"],
           streamSubgraphs: true,
-          streamResumable: true,
+          // Disable automatic resume to prevent a previously interrupted run
+          // from continuing when user sends a new unrelated message.
+          streamResumable: false,
           config: {
-            recursion_limit: 1000,
+            // Avoid excessive agent loops on complex prompts; keeps latency bounded.
+            recursion_limit: 300,
           },
           context: {
             ...extraContext,
-            ...context,
-            thinking_enabled: context.mode !== "flash",
-            is_plan_mode: context.mode === "pro" || context.mode === "ultra",
-            subagent_enabled: context.mode === "ultra",
-            reasoning_effort:
-              context.reasoning_effort ??
-              (context.mode === "ultra"
-                ? "high"
-                : context.mode === "pro"
-                  ? "medium"
-                  : context.mode === "thinking"
-                    ? "low"
-                    : undefined),
+            thinking_enabled: thinkingEnabled,
+            is_plan_mode: isPlanMode,
+            subagent_enabled: subagentEnabled,
+            ...(reasoningEffort !== undefined
+              ? { reasoning_effort: reasoningEffort }
+              : {}),
             thread_id: threadId,
+            ...(userId ? { user_id: userId } : {}),
+            ...(context.model_name !== undefined
+              ? { model_name: context.model_name }
+              : {}),
           },
         };
+        const submitStartAt = Date.now();
+        if (perfTraceRef.current) {
+          perfTraceRef.current.submitStartAt = submitStartAt;
+          logTimeline("提交消息请求开始", {
+            追踪ID: perfTraceRef.current.traceId,
+            时间: formatZhTime(submitStartAt),
+          });
+        }
         await callApiWithTimer("提交消息并开启流式接口", () =>
           thread.submit(submitPayload, submitOptions),
         );
@@ -680,7 +718,7 @@ export function useThreadStream({
         sendInFlightRef.current = false;
       }
     },
-    [thread, _handleOnStart, t.uploads.uploadingFiles, context, queryClient],
+    [thread, _handleOnStart, t.uploads.uploadingFiles, context, queryClient, userId],
   );
 
   // Merge thread with optimistic messages for display
