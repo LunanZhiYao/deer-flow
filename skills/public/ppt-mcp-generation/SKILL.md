@@ -15,6 +15,13 @@ description: Use this skill when the user requests to generate, create, or make 
 
 ## 工作流程
 
+### 执行策略（防止长链路循环）
+
+- **优先 batch**：同一页存在多个写入操作时，优先一次 `officecli batch` 完成，再做一次统一校验。
+- **限制重试**：单个写入点最多允许 **1 次**回退重试（更换选择器或下钻到 paragraph）。
+- **失败快返**：若重试后仍失败，必须明确报错并停止当前任务，禁止继续“边失败边推进”。
+- **大任务分批**：超过 5 页时，建议先完成前 3-5 页并交付，再按用户确认继续下一批。
+
 ### 步骤0: 查看模板结构（重要！）
 
 **必须先查看模板结构**，了解占位符名称：
@@ -107,6 +114,7 @@ command: officecli set /mnt/user-data/outputs/presentation.pptx '/slide[1]/shape
 ### 步骤4: 写入后强制校验（必须执行）
 
 每次 `set` 之后，必须立刻 `get` 验证文本是否实际写入。禁止仅根据 `set` 返回成功就认为完成。
+若同页使用 `batch`，允许在该页全部写入后统一执行一次校验。
 
 占位符示例校验：
 
@@ -122,15 +130,15 @@ description: 校验文本框写入结果
 command: officecli get /mnt/user-data/outputs/presentation.pptx '/slide[1]/shape[@id=4]' --depth 3
 ```
 
-若校验内容不匹配，按以下顺序回退重试：
+若校验内容不匹配，按以下顺序回退重试（最多 1 轮）：
 1. 重新读取该页结构（`officecli get ... /slide[N] --depth 3`）
 2. 改用更精确选择器（`shape[@id=...]` 优于 `shape[1]`）
 3. 必要时改写到段落层：`/shape[@id=x]/paragraph[1]`
-4. 仍失败则明确报错，不得静默继续
+4. 若 1 轮重试后仍失败，明确报错并停止，不得静默继续
 
-### 步骤4.5: 推荐使用 batch 执行多步写入（最稳）
+### 步骤4.5: 优先使用 batch 执行多步写入（最稳）
 
-当需要执行多个 `set/add/remove` 时，优先使用 `officecli batch`，它会在一次 open/save 周期内执行，减少会话状态不一致风险。
+当需要执行多个 `set/add/remove` 时，优先使用 `officecli batch`，它会在一次 open/save 周期内执行，减少会话状态不一致风险，并减少工具调用步数。
 
 示例（将 JSON 存入临时文件后执行）：
 

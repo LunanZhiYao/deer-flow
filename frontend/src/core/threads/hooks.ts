@@ -680,8 +680,8 @@ export function useThreadStream({
           // from continuing when user sends a new unrelated message.
           streamResumable: false,
           config: {
-            // Avoid excessive agent loops on complex prompts; keeps latency bounded.
-            recursion_limit: 300,
+            // Keep complex multi-tool flows (e.g. PPT generation) from stopping too early.
+            recursion_limit: 800,
           },
           context: {
             ...extraContext,
